@@ -26,6 +26,8 @@ class Registrant(Base):
     address = Column(String, nullable=True)
     city = Column(String, nullable=True)
     state = Column(String, nullable=True)
+    country = Column(String, nullable=True)
+    continent = Column(String, nullable=True)  # Africa, North America, Europe, Asia, Oceania, South America
     age_group = Column(String, nullable=False, default="adult")  # child, youth, adult
     product_id = Column(String, nullable=True)
     product_name = Column(String, nullable=True)
