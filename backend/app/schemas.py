@@ -34,6 +34,8 @@ class RegistrantCreate(BaseModel):
     address: Optional[str] = None
     city: Optional[str] = None
     state: Optional[str] = None
+    country: Optional[str] = None
+    continent: Optional[str] = None
     age_group: str = "adult"  # child, youth, adult
     product_id: Optional[str] = None
     product_name: Optional[str] = None
@@ -49,6 +51,8 @@ class RegistrantUpdate(BaseModel):
     address: Optional[str] = None
     city: Optional[str] = None
     state: Optional[str] = None
+    country: Optional[str] = None
+    continent: Optional[str] = None
     age_group: Optional[str] = None
     product_id: Optional[str] = None
     product_name: Optional[str] = None
@@ -67,6 +71,8 @@ class RegistrantOut(BaseModel):
     address: Optional[str]
     city: Optional[str]
     state: Optional[str]
+    country: Optional[str]
+    continent: Optional[str]
     age_group: str
     product_id: Optional[str]
     product_name: Optional[str]
