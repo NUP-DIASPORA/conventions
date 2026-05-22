@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Outer ring -->
+  <circle cx="100" cy="100" r="98" fill="#1a3a6b" />
+  <circle cx="100" cy="100" r="88" fill="white" />
+
+  <!-- Umbrella canopy -->
+  <path d="M100 55 Q70 55 55 75 Q72 65 100 68 Q128 65 145 75 Q130 55 100 55Z" fill="#1a3a6b"/>
+  <path d="M55 75 Q65 90 100 90 Q72 65 55 75Z" fill="#cc1f1f"/>
+  <path d="M100 68 Q100 90 100 90 Q72 65 100 68Z" fill="#1a3a6b"/>
+  <path d="M100 68 Q128 65 145 75 Q100 90 100 90 Q100 68 100 68Z" fill="#cc1f1f"/>
+  <path d="M145 75 Q135 90 100 90 Q128 65 145 75Z" fill="#1a3a6b"/>
+
+  <!-- Umbrella handle -->
+  <line x1="100" y1="90" x2="100" y2="125" stroke="#1a3a6b" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M100 125 Q100 135 92 135 Q84 135 84 128" fill="none" stroke="#1a3a6b" stroke-width="3.5" stroke-linecap="round"/>
+
+  <!-- Arc text top: NATIONAL -->
+  <path id="topArc" d="M 25,100 A 75,75 0 0,1 175,100" fill="none"/>
+  <text font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="white" letter-spacing="3">
+    <textPath href="#topArc" startOffset="50%" text-anchor="middle">NATIONAL</textPath>
+  </text>
+
+  <!-- Arc text bottom: UNITY PLATFORM -->
+  <path id="bottomArc" d="M 22,110 A 78,78 0 0,0 178,110" fill="none"/>
+  <text font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white" letter-spacing="2">
+    <textPath href="#bottomArc" startOffset="50%" text-anchor="middle">UNITY PLATFORM</textPath>
+  </text>
+
+  <!-- Stars -->
+  <text x="32" y="105" font-size="10" fill="white" text-anchor="middle">★</text>
+  <text x="168" y="105" font-size="10" fill="white" text-anchor="middle">★</text>
+</svg>
