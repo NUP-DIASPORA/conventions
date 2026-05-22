@@ -5,12 +5,14 @@ import { Link } from 'react-router-dom'
 
 const EMPTY_FORM = {
   first_name: '', last_name: '', email: '', phone: '',
-  address: '', city: '', state: '',
+  address: '', city: '', state: '', country: '', continent: '',
   age_group: 'adult',
   product_id: '', product_name: '', payment_amount: '',
   payer_name: '',
   ticket_type: 'general', notes: '',
 }
+
+const CONTINENTS = ['Africa', 'North America', 'South America', 'Europe', 'Asia', 'Oceania', 'Middle East']
 
 export default function AdminRegistrants() {
   const queryClient = useQueryClient()
@@ -78,6 +80,8 @@ export default function AdminRegistrants() {
                 <th className="px-4 py-3 text-left">Attendee</th>
                 <th className="px-4 py-3 text-left">Contact</th>
                 <th className="px-4 py-3 text-left">Location</th>
+                <th className="px-4 py-3 text-left">Country</th>
+                <th className="px-4 py-3 text-left">Continent</th>
                 <th className="px-4 py-3 text-left">Age Group</th>
                 <th className="px-4 py-3 text-left">Product</th>
                 <th className="px-4 py-3 text-left">Payment</th>
@@ -103,6 +107,8 @@ export default function AdminRegistrants() {
                   <td className="px-4 py-3 text-gray-500">
                     {[r.city, r.state].filter(Boolean).join(', ') || '—'}
                   </td>
+                  <td className="px-4 py-3 text-gray-500">{r.country || '—'}</td>
+                  <td className="px-4 py-3 text-gray-500">{r.continent || '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                       r.age_group === 'child' ? 'bg-pink-50 text-pink-600' :
@@ -146,7 +152,7 @@ export default function AdminRegistrants() {
                 </tr>
               ))}
               {!isLoading && registrants.length === 0 && (
-                <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">No registrants found.</td></tr>
+                <tr><td colSpan={14} className="px-4 py-10 text-center text-gray-400">No registrants found.</td></tr>
               )}
             </tbody>
           </table>
@@ -187,7 +193,14 @@ export default function AdminRegistrants() {
                   <input placeholder="Street address" value={form.address} onChange={set('address')} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   <div className="grid grid-cols-2 gap-3">
                     <input placeholder="City" value={form.city} onChange={set('city')} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <input placeholder="State" value={form.state} onChange={set('state')} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <input placeholder="State / Province" value={form.state} onChange={set('state')} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input placeholder="Country" value={form.country} onChange={set('country')} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <select value={form.continent} onChange={set('continent')} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500">
+                      <option value="">Continent</option>
+                      {CONTINENTS.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
                 </div>
               </div>
