@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { triggerLogout } from './auth'
 
 const api = axios.create({
   baseURL: '/api',
@@ -12,19 +13,20 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Redirect to login on 401
+// On 401, clear auth state — React Router's ProtectedRoute handles the redirect
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('token')
-      window.location.href = '/admin/login'
+      triggerLogout()
     }
     return Promise.reject(err)
   }
 )
 
 // --- Auth ---
+export const changePassword = (current_password, new_password) =>
+  api.post('/auth/change-password', { current_password, new_password })
 export const login = (email, password) => {
   const form = new URLSearchParams()
   form.append('username', email)
@@ -40,10 +42,14 @@ export const deleteRegistrant = (id) => api.delete(`/registrants/${id}`)
 export const getQRCode = (id) => api.get(`/registrants/${id}/qr`)
 
 // --- Check-ins ---
-export const checkIn = (registrantId, conferenceDay) =>
-  api.post('/checkins', { registrant_id: registrantId, conference_day: conferenceDay })
+export const checkIn = (registrantId, eventType, conferenceDay) =>
+  api.post('/checkins', { registrant_id: registrantId, event_type: eventType, conference_day: conferenceDay ?? null })
 export const getCheckins = (params) => api.get('/checkins', { params })
 export const getCheckinStats = () => api.get('/checkins/stats')
+
+// --- Payments ---
+export const createPayment = (data) => api.post('/payments', data)
+export const deletePayment = (id) => api.delete(`/payments/${id}`)
 
 // --- Speakers ---
 export const getSpeakers = () => api.get('/speakers')
