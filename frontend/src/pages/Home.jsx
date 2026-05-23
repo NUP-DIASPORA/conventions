@@ -199,7 +199,7 @@ export default function Home() {
             <RegCard title="Full Registration" price="$300" sub="One-time payment"
               link="https://buy.stripe.com/fZucN60BC3SKcLR9eYaR20j" label="Pay Full Registration" primary />
             <RegCard title="Partial Payment" price="2 × $150" sub="Pay in two installments"
-              link="https://buy.stripe.com/bIYaIp1i59JX7Vm6ov" label="Pay in 2 Installments" />
+              link="https://buy.stripe.com/fZucN6gAA3SK139aj2aR20k" label="Pay in 2 Installments" />
             <RegCard title="Boat Cruise" price="$220" sub="Heroes Celebration · Aug 15"
               link="https://buy.stripe.com/9AQ4k10e1cW96Ri14e" label="Buy Boat Cruise Ticket" />
           </div>
