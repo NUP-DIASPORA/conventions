@@ -46,7 +46,8 @@ export default function AdminCheckIn() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-blue-800 text-white px-6 py-4 flex items-center gap-4">
-        <Link to="/admin" className="text-blue-200 hover:text-white text-sm">← Dashboard</Link>
+        <Link to="/" className="text-blue-200 hover:text-white text-sm">← Home</Link>
+        <Link to="/admin" className="text-blue-200 hover:text-white text-sm">Dashboard</Link>
         <h1 className="text-lg font-bold">Check-In</h1>
       </header>
 
