@@ -154,7 +154,7 @@ export default function Home() {
         </div>
 
         {/* 4-column info grid */}
-        <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-white/10">
+        <div className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-white/10">
           <InfoCell
             icon="🎯"
             title="About the Convention"
@@ -367,7 +367,7 @@ export default function Home() {
 
 function InfoCell({ icon, title, text, link, linkLabel }) {
   return (
-    <div className="p-7 hover:bg-white/5 transition group">
+    <div className="p-4 sm:p-7 hover:bg-white/5 transition group">
       <div className="text-2xl mb-3">{icon}</div>
       <h3 className="font-black text-white text-sm mb-2">{title}</h3>
       <p className="text-blue-400/60 text-xs leading-relaxed mb-3">{text}</p>
