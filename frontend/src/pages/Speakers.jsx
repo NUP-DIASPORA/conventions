@@ -60,7 +60,7 @@ export default function Speakers() {
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-12">
-      <p className="text-xs font-semibold text-blue-700 uppercase tracking-widest mb-1">NUP Diaspora Convention 2026</p>
+      <p className="text-xs font-semibold text-red-600 uppercase tracking-widest mb-1">NUP Diaspora Convention 2026</p>
       <h1 className="text-3xl font-bold text-gray-800 mb-1">Featured Speakers</h1>
       <p className="text-gray-500 text-sm mb-10">Voices of Freedom and Justice</p>
 
@@ -68,7 +68,7 @@ export default function Speakers() {
 
       {keynotes.length > 0 && (
         <section className="mb-12">
-          <h2 className="text-sm font-semibold text-blue-700 uppercase tracking-widest mb-5">Keynote Speaker</h2>
+          <h2 className="text-xs font-semibold text-red-600 uppercase tracking-widest mb-5">Keynote Speaker</h2>
           <div className="grid grid-cols-1 gap-6">
             {keynotes.map(s => <SpeakerCard key={s.id} speaker={s} keynote />)}
           </div>
@@ -77,7 +77,7 @@ export default function Speakers() {
 
       {regular.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-5">Guest Speakers</h2>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-5">Guest Speakers</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {regular.map(s => <SpeakerCard key={s.id} speaker={s} />)}
           </div>
@@ -92,37 +92,43 @@ function SpeakerCard({ speaker, keynote }) {
 
   if (keynote) {
     return (
-      <div className="bg-gradient-to-r from-blue-800 to-blue-700 text-white rounded-2xl shadow-lg p-6 flex flex-col sm:flex-row gap-6">
-        <div className="shrink-0">
-          {speaker.photo_url
-            ? <img src={speaker.photo_url} alt={speaker.first_name} className="w-28 h-28 rounded-full object-cover border-4 border-white/30" />
-            : <div className="w-28 h-28 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold text-white">{initials}</div>
-          }
-        </div>
-        <div>
-          <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-medium uppercase tracking-wide">Keynote</span>
-          <h3 className="text-2xl font-bold mt-2">{speaker.first_name} {speaker.last_name}</h3>
-          <p className="text-blue-200 text-sm">{speaker.title}</p>
-          <p className="text-blue-300 text-xs mt-0.5">{speaker.organization}</p>
-          {speaker.bio && <p className="text-blue-100 text-sm mt-3 leading-relaxed">{speaker.bio}</p>}
+      <div className="bg-gray-900 text-white rounded-2xl shadow-lg overflow-hidden flex flex-col sm:flex-row">
+        {/* Red left accent bar */}
+        <div className="w-full sm:w-1.5 h-1.5 sm:h-auto bg-red-600 shrink-0" />
+        <div className="flex flex-col sm:flex-row gap-6 p-6 sm:p-8 flex-1">
+          {/* Avatar */}
+          <div className="shrink-0">
+            {speaker.photo_url
+              ? <img src={speaker.photo_url} alt={speaker.first_name} className="w-24 h-24 rounded-full object-cover border-4 border-white/10" />
+              : <div className="w-24 h-24 rounded-full bg-gray-700 flex items-center justify-center text-2xl font-bold text-white">{initials}</div>
+            }
+          </div>
+          {/* Content */}
+          <div className="flex-1">
+            <span className="text-xs bg-red-600 text-white px-2.5 py-0.5 rounded-full font-semibold uppercase tracking-wide">Keynote</span>
+            <h3 className="text-2xl font-black mt-2 mb-0.5">{speaker.first_name} {speaker.last_name}</h3>
+            <p className="text-blue-400/60 text-sm font-medium">{speaker.title}</p>
+            <p className="text-blue-400/60 text-xs mt-0.5 mb-4">{speaker.organization}</p>
+            {speaker.bio && <p className="text-gray-300 text-sm leading-relaxed">{speaker.bio}</p>}
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-xl shadow border border-gray-100 p-5 flex flex-col">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex flex-col">
       <div className="flex items-center gap-4 mb-3">
         {speaker.photo_url
           ? <img src={speaker.photo_url} alt={speaker.first_name} className="w-14 h-14 rounded-full object-cover" />
-          : <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-lg font-bold text-blue-600 shrink-0">{initials}</div>
+          : <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center text-lg font-bold text-gray-500 shrink-0">{initials}</div>
         }
         <div>
           <h3 className="font-semibold text-gray-800">{speaker.first_name} {speaker.last_name}</h3>
-          <p className="text-xs text-blue-600">{speaker.title}</p>
+          <p className="text-xs text-red-600 font-medium">{speaker.title}</p>
         </div>
       </div>
-      <p className="text-xs text-gray-500 mb-2">{speaker.organization}</p>
+      <p className="text-xs text-gray-400 mb-2">{speaker.organization}</p>
       {speaker.bio && <p className="text-sm text-gray-600 leading-relaxed line-clamp-4">{speaker.bio}</p>}
     </div>
   )

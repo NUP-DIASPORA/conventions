@@ -41,7 +41,7 @@ class PaymentInline(BaseModel):
     notes: Optional[str] = None
 
 class PaymentCreate(BaseModel):
-    registrant_id: int
+    registrant_id: Optional[int] = None  # null = unattributed payment
     product_type: str
     installment: Optional[int] = None
     amount: str
@@ -52,7 +52,7 @@ class PaymentCreate(BaseModel):
 
 class PaymentOut(BaseModel):
     id: int
-    registrant_id: int
+    registrant_id: Optional[int]
     product_type: str
     installment: Optional[int]
     amount: str

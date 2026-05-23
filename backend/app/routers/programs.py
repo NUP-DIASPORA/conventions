@@ -9,7 +9,7 @@ from ..utils.auth import get_current_admin
 router = APIRouter(prefix="/api/programs", tags=["programs"])
 
 
-@router.get("/", response_model=List[schemas.ProgramSessionOut])
+@router.get("", response_model=List[schemas.ProgramSessionOut])
 def list_sessions(
     session_date: Optional[date] = Query(None, description="Filter by date (YYYY-MM-DD)"),
     db: Session = Depends(get_db),
@@ -22,7 +22,7 @@ def list_sessions(
     return query.order_by(models.ProgramSession.session_date, models.ProgramSession.start_time).all()
 
 
-@router.post("/", response_model=schemas.ProgramSessionOut, status_code=201)
+@router.post("", response_model=schemas.ProgramSessionOut, status_code=201)
 def create_session(
     session_in: schemas.ProgramSessionCreate,
     db: Session = Depends(get_db),

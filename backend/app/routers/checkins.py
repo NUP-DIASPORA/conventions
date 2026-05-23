@@ -8,7 +8,7 @@ from ..utils.auth import get_current_admin
 router = APIRouter(prefix="/api/checkins", tags=["checkins"])
 
 
-@router.post("/", response_model=schemas.CheckInOut, status_code=201)
+@router.post("", response_model=schemas.CheckInOut, status_code=201)
 def check_in_registrant(
     checkin_in: schemas.CheckInCreate,
     db: Session = Depends(get_db),
@@ -21,15 +21,12 @@ def check_in_registrant(
         raise HTTPException(status_code=404, detail="Registrant not found")
 
     if checkin_in.event_type == "convention":
-        if checkin_in.conference_day is None:
-            raise HTTPException(status_code=400, detail="conference_day required for convention check-in")
         existing = db.query(models.CheckIn).filter(
             models.CheckIn.registrant_id == checkin_in.registrant_id,
             models.CheckIn.event_type == "convention",
-            models.CheckIn.conference_day == checkin_in.conference_day,
         ).first()
         if existing:
-            raise HTTPException(status_code=400, detail=f"Already checked in for day {checkin_in.conference_day}")
+            raise HTTPException(status_code=400, detail="Already checked in for convention")
         registrant.checked_in = True
 
     elif checkin_in.event_type == "boat_cruise":
@@ -56,7 +53,7 @@ def check_in_registrant(
     return checkin
 
 
-@router.get("/", response_model=List[schemas.CheckInOut])
+@router.get("", response_model=List[schemas.CheckInOut])
 def list_checkins(
     event_type: Optional[str] = None,
     conference_day: Optional[int] = None,
@@ -86,18 +83,10 @@ def checkin_stats(
     convention_checkins = db.query(models.CheckIn).filter(models.CheckIn.event_type == "convention").count()
     boat_cruise_checkins = db.query(models.CheckIn).filter(models.CheckIn.event_type == "boat_cruise").count()
 
-    by_day = {}
-    for day in range(1, 5):  # 4-day convention
-        by_day[f"day_{day}"] = db.query(models.CheckIn).filter(
-            models.CheckIn.event_type == "convention",
-            models.CheckIn.conference_day == day,
-        ).count()
-
     return {
         "total_registrants": total_registrants,
         "convention_registrants": convention_registrants,
         "boat_cruise_registrants": boat_cruise_registrants,
         "convention_checkins": convention_checkins,
         "boat_cruise_checkins": boat_cruise_checkins,
-        "checkins_by_day": by_day,
     }

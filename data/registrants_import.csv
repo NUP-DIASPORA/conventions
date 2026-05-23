@@ -1,0 +1,35 @@
+first_name,last_name,email,phone,address,city,state,country,continent,age_group,convention,boat_cruise,conv_amount,conv_installment,boat_amount,boat_installment,notes,addr_matched
+Mrs.,Kavuma,mrs.kavuma@nup2026.placeholder,,1207 OBISPO AVE 108,Long Beach,CA,United States,North America,adult,True,True,300.00,,220.00,,Name unknown — listed as Mrs. Joseph Kavuma; please update first name,Yes (Joseph Kavuma address used)
+Aisha,Nakijoba,aisha.nakijoba@nup2026.placeholder,,,,CA,United States,North America,adult,True,True,300.00,,220.00,,Address unknown — please update,No
+Joel,Ssemakula,joel.ssemakula@nup2026.placeholder,,8916 Willis Avenue Apt 203,Panorama City,CA,United States,North America,adult,True,True,300.00,,220.00,,Address from 2023 report (Joel Ssemakula),Yes
+William,Ssenkumba,william.ssenkumba@nup2026.placeholder,,,,CA,United States,North America,adult,True,True,300.00,,220.00,,Address unknown — please update,No
+Claire,Muwanguzi,claire.muwanguzi@nup2026.placeholder,,175 Acalanes Dr 36,Sunnyvale,CA,United States,North America,adult,True,True,280.00,,220.00,,Address from 2023 report (Claire Muwanguzi),Yes
+Joseph,Kavuma,joseph.kavuma@nup2026.placeholder,,,,CA,United States,North America,adult,True,True,280.00,,220.00,,Address unknown — please update,No
+Elizabeth,Ssemakula,elizabeth.ssemakula@nup2026.placeholder,,,,CA,United States,North America,adult,True,False,300.00,,,,Address unknown — please update,No
+Vicent,Kiwanda,vicent.kiwanda@nup2026.placeholder,,,,CA,United States,North America,adult,True,False,150.00,1,,,Address unknown — please update,No
+David,Daaka,david.daaka@nup2026.placeholder,,16250 Homecomimg Drive,Chino,CA,United States,North America,adult,True,False,200.00,,,,Address from 2023 report (David Daka); Non-standard convention payment $200.0 — verify,Yes
+Florence,Sekikwa,florence.sekikwa@nup2026.placeholder,,1036 magnolia ave 106,Gardena,CA,United States,North America,adult,True,False,300.00,,,,Address from 2023 report (Florence Sekikwa),Yes
+Josephine,Nanyonga,josephine.nanyonga@nup2026.placeholder,,,,CA,United States,North America,adult,True,False,300.00,,,,Address unknown — please update,No
+Miriam,Bukirwa,miriam.bukirwa@nup2026.placeholder,,,,CA,United States,North America,adult,True,False,150.00,1,,,Address unknown — please update,No
+Dan,Semanda,dan.semanda@nup2026.placeholder,,9854 Solar Crse,Laurel,MD,United States,North America,adult,True,False,300.00,,,,Address from 2023 report (Bruno Semanda),Yes
+Safina,Kisegere,safina.kisegere@nup2026.placeholder,,,,CA,United States,North America,adult,True,False,300.00,,,,Address unknown — please update,No
+Herman,Ainebyona,herman.ainebyona@nup2026.placeholder,,80 W. Main Street Apt 2,Marlborough,MA,United States,North America,adult,True,True,300.00,,220.00,,Address from 2023 report (Herman Ainebyona),Yes
+Hellen,Nandaula,hellen.nandaula@nup2026.placeholder,,,,MA,United States,North America,adult,True,False,300.00,,,,Address unknown — please update,No
+Mabel,Nakyazze,mabel.nakyazze@nup2026.placeholder,,,,MA,United States,North America,adult,True,False,300.00,,,,Address unknown — please update,No
+Aidah,Achieng,aidah.achieng@nup2026.placeholder,,51 FELTON STREET Apt 2,Hudson,Ma,United States,North America,adult,True,False,300.00,,,,Address from 2023 report (Aidah Achieng),Yes
+Leila,Mutaasa,leila.mutaasa@nup2026.placeholder,,76 Ridgewood st,Boston,MA,United States,North America,adult,True,False,135.00,,,,Address from 2023 report (Leilah Mutaasa); Non-standard convention payment $135.0 — verify,Yes
+Daniel,Kawuma,daniel.kawuma@nup2026.placeholder,,9854 Solar Course,Laurel,MD,United States,North America,adult,True,True,300.00,,220.00,,Address from 2023 report (Daniel Kawuma),Yes
+Priscilla,Kawuma,priscilla.kawuma@nup2026.placeholder,,,,MD,United States,North America,adult,True,False,300.00,,,,Address unknown — please update,No
+Charity,Nakabuye,charity.nakabuye@nup2026.placeholder,,,,MD,United States,North America,adult,True,True,300.00,,220.00,,Address unknown — please update,No
+Shamim,Nabagala,shamim.nabagala@nup2026.placeholder,,450 old Connecticut path,Framingham,MA,United States,North America,adult,True,False,300.00,,,,Address from 2023 report (Shamim Nabaggala),Yes
+John,Mutyaba,john.mutyaba@nup2026.placeholder,,,,MN,United States,North America,adult,True,True,300.00,,200.00,,Address unknown — please update,No
+Winnie,Mutyaba,winnie.mutyaba@nup2026.placeholder,,,,MN,United States,North America,adult,True,True,300.00,,200.00,,Address unknown — please update,No
+Elvis,Balikalaba,elvis.balikalaba@nup2026.placeholder,,,,MN,United States,North America,adult,True,True,300.00,,220.00,,Address unknown — please update,No
+Kisa,Kisaakye,kisa.kisaakye@nup2026.placeholder,,,,AZ,United States,North America,adult,True,True,300.00,,220.00,,Address unknown — please update,No
+Violet,Kato,violet.kato@nup2026.placeholder,,,,AZ,United States,North America,adult,True,False,300.00,,,,Address unknown — please update,No
+Lukwago,Karim,lukwago.karim@nup2026.placeholder,,,,AZ,United States,North America,adult,True,False,300.00,,,,Address unknown — please update,No
+Lukwago,Sudaice,lukwago.sudaice@nup2026.placeholder,,,,AZ,United States,North America,adult,True,False,300.00,,,,Address unknown — please update,No
+Alice,Nazziwa,alice.nazziwa@nup2026.placeholder,,,,,Germany,Europe,adult,True,False,300.00,,,,Address unknown — please update,No
+Gift,Dlamini,gift.dlamini@nup2026.placeholder,,,,,Ireland,Europe,adult,True,False,300.00,,,,Address unknown — please update,No
+Eric,Simelane,eric.simelane@nup2026.placeholder,,,,,Uganda,Africa,adult,True,False,300.00,,,,Address unknown — please update,No
+Bridget,Beireta,bridget.beireta@nup2026.placeholder,,,,,Uganda,Africa,adult,True,False,300.00,,,,Address unknown — please update,No

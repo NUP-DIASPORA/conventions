@@ -3,25 +3,9 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { getRegistrants, checkIn, getCheckinStats } from '../../services/api'
 import { Link } from 'react-router-dom'
 
-// Convention: Aug 13 = day 1 … Aug 16 = day 4
-function getCurrentDay() {
-  const start = new Date('2026-08-13')
-  const today = new Date()
-  const diff = Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1
-  return Math.min(Math.max(diff, 1), 4)
-}
-
-const DAY_LABELS = {
-  1: 'Day 1 — Wed Aug 13',
-  2: 'Day 2 — Thu Aug 14',
-  3: 'Day 3 — Fri Aug 15',
-  4: 'Day 4 — Sat Aug 16',
-}
-
 export default function AdminCheckIn() {
   const [eventType, setEventType] = useState('convention')  // 'convention' | 'boat_cruise'
   const [search, setSearch] = useState('')
-  const [conferenceDay, setConferenceDay] = useState(getCurrentDay())
   const [successMsg, setSuccessMsg] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -38,10 +22,9 @@ export default function AdminCheckIn() {
   })
 
   const checkInMutation = useMutation({
-    mutationFn: ({ registrantId }) =>
-      checkIn(registrantId, eventType, eventType === 'convention' ? conferenceDay : null),
+    mutationFn: ({ registrantId }) => checkIn(registrantId, eventType, null),
     onSuccess: () => {
-      setSuccessMsg(`Checked in for ${eventType === 'boat_cruise' ? 'Boat Cruise' : DAY_LABELS[conferenceDay]}!`)
+      setSuccessMsg(`Checked in for ${eventType === 'boat_cruise' ? 'Boat Cruise' : 'Convention'}!`)
       setSearch('')
       setErrorMsg('')
       setTimeout(() => setSuccessMsg(''), 3000)
@@ -78,7 +61,7 @@ export default function AdminCheckIn() {
             onClick={() => { setEventType('convention'); setSearch(''); setErrorMsg(''); setSuccessMsg('') }}
             className={`flex-1 py-3 text-sm font-semibold transition ${
               eventType === 'convention'
-                ? 'bg-[#0a1c46] text-white'
+                ? 'bg-gray-800 text-white'
                 : 'text-gray-500 hover:bg-gray-50'
             }`}
           >
@@ -102,10 +85,7 @@ export default function AdminCheckIn() {
             {eventType === 'convention' ? (
               <>
                 <span className="bg-white rounded-lg px-3 py-2 shadow-sm border">
-                  <strong>{stats.convention_checkins}</strong> checked in (convention)
-                </span>
-                <span className="bg-white rounded-lg px-3 py-2 shadow-sm border">
-                  <strong>{stats.checkins_by_day?.[`day_${conferenceDay}`] ?? 0}</strong> today
+                  <strong>{stats.convention_checkins}</strong> checked in
                 </span>
                 <span className="bg-white rounded-lg px-3 py-2 shadow-sm border">
                   <strong>{stats.convention_registrants}</strong> registered
@@ -114,32 +94,13 @@ export default function AdminCheckIn() {
             ) : (
               <>
                 <span className="bg-white rounded-lg px-3 py-2 shadow-sm border">
-                  <strong>{stats.boat_cruise_checkins}</strong> checked in (cruise)
+                  <strong>{stats.boat_cruise_checkins}</strong> checked in
                 </span>
                 <span className="bg-white rounded-lg px-3 py-2 shadow-sm border">
                   <strong>{stats.boat_cruise_registrants}</strong> registered
                 </span>
               </>
             )}
-          </div>
-        )}
-
-        {/* Day selector (convention only) */}
-        {eventType === 'convention' && (
-          <div className="mb-5 flex items-center gap-3">
-            <label className="text-sm font-medium text-gray-700">Day:</label>
-            <div className="flex gap-2 flex-wrap">
-              {[1, 2, 3, 4].map(d => (
-                <button key={d} onClick={() => setConferenceDay(d)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition ${
-                    conferenceDay === d
-                      ? 'bg-[#0a1c46] text-white border-[#0a1c46]'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                  }`}>
-                  {DAY_LABELS[d]}
-                </button>
-              ))}
-            </div>
           </div>
         )}
 

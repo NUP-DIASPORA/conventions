@@ -9,7 +9,7 @@ from ..utils.qr import generate_qr_code, get_registrant_qr_data
 router = APIRouter(prefix="/api/registrants", tags=["registrants"])
 
 
-@router.get("/", response_model=List[schemas.RegistrantOut])
+@router.get("", response_model=List[schemas.RegistrantOut])
 def list_registrants(
     skip: int = 0,
     limit: int = 100,
@@ -33,7 +33,7 @@ def list_registrants(
     return query.offset(skip).limit(limit).all()
 
 
-@router.post("/", response_model=schemas.RegistrantOut, status_code=201)
+@router.post("", response_model=schemas.RegistrantOut, status_code=201)
 def create_registrant(
     registrant_in: schemas.RegistrantCreate,
     db: Session = Depends(get_db),
