@@ -52,7 +52,7 @@ class Payment(Base):
     __tablename__ = "payments"
 
     id = Column(Integer, primary_key=True, index=True)
-    registrant_id = Column(Integer, ForeignKey("registrants.id"), nullable=False)
+    registrant_id = Column(Integer, ForeignKey("registrants.id"), nullable=True)  # null = unattributed
     product_type = Column(String, nullable=False)  # "convention", "boat_cruise", "donation"
     installment = Column(Integer, nullable=True)   # 1 or 2; null = full payment
     amount = Column(String, nullable=False)        # e.g. "300.00"

@@ -8,13 +8,13 @@ from ..utils.auth import get_current_admin
 router = APIRouter(prefix="/api/speakers", tags=["speakers"])
 
 
-@router.get("/", response_model=List[schemas.SpeakerOut])
+@router.get("", response_model=List[schemas.SpeakerOut])
 def list_speakers(db: Session = Depends(get_db)):
     """Public endpoint - no auth required."""
     return db.query(models.Speaker).order_by(models.Speaker.is_keynote.desc(), models.Speaker.last_name).all()
 
 
-@router.post("/", response_model=schemas.SpeakerOut, status_code=201)
+@router.post("", response_model=schemas.SpeakerOut, status_code=201)
 def create_speaker(
     speaker_in: schemas.SpeakerCreate,
     db: Session = Depends(get_db),

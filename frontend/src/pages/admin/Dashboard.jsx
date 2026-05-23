@@ -68,9 +68,6 @@ export default function AdminDashboard() {
             <StatCard label="Boat Cruise" value={stats.boat_cruise_registrants} color="cyan" />
             <StatCard label="Conv. Check-ins" value={stats.convention_checkins} color="green" />
             <StatCard label="Cruise Check-ins" value={stats.boat_cruise_checkins} color="green" />
-            {Object.entries(stats.checkins_by_day).map(([day, count]) => (
-              <StatCard key={day} label={`Day ${day.split('_')[1]} Check-ins`} value={count} color="gray" />
-            ))}
           </div>
         )}
 

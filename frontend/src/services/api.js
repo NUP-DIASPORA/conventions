@@ -50,6 +50,8 @@ export const getCheckinStats = () => api.get('/checkins/stats')
 // --- Payments ---
 export const createPayment = (data) => api.post('/payments', data)
 export const deletePayment = (id) => api.delete(`/payments/${id}`)
+export const getUnattributedPayments = () => api.get('/payments/unattributed')
+export const linkPayment = (paymentId, registrantId) => api.patch(`/payments/${paymentId}/link?registrant_id=${registrantId}`)
 
 // --- Speakers ---
 export const getSpeakers = () => api.get('/speakers')
