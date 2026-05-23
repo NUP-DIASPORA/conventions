@@ -1,21 +1,60 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { getCheckinStats } from '../../services/api'
+import { getCheckinStats, changePassword } from '../../services/api'
 import { useAuth } from '../../services/auth'
 
 export default function AdminDashboard() {
   const { logout } = useAuth()
+  const [showPwForm, setShowPwForm] = useState(false)
+  const [pwForm, setPwForm] = useState({ current_password: '', new_password: '', confirm: '' })
+  const [pwError, setPwError] = useState('')
+  const [pwSuccess, setPwSuccess] = useState('')
+
   const { data: stats } = useQuery({
     queryKey: ['checkin-stats'],
     queryFn: () => getCheckinStats().then(r => r.data),
   })
 
+  const changePwMutation = useMutation({
+    mutationFn: () => changePassword(pwForm.current_password, pwForm.new_password),
+    onSuccess: () => {
+      setPwSuccess('Password changed successfully.')
+      setPwError('')
+      setPwForm({ current_password: '', new_password: '', confirm: '' })
+      setTimeout(() => { setShowPwForm(false); setPwSuccess('') }, 2000)
+    },
+    onError: (err) => setPwError(err.response?.data?.detail || 'Failed to change password'),
+  })
+
+  const handlePwSubmit = (e) => {
+    e.preventDefault()
+    setPwError('')
+    if (pwForm.new_password !== pwForm.confirm) {
+      setPwError('New passwords do not match')
+      return
+    }
+    if (pwForm.new_password.length < 6) {
+      setPwError('New password must be at least 6 characters')
+      return
+    }
+    changePwMutation.mutate()
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Admin nav */}
       <header className="bg-blue-800 text-white px-6 py-4 flex justify-between items-center">
-        <h1 className="text-lg font-bold">NUP Convention — Admin</h1>
-        <button onClick={logout} className="text-sm text-blue-200 hover:text-white">Sign out</button>
+        <div className="flex items-center gap-4">
+          <Link to="/" className="text-blue-200 hover:text-white text-sm">← Home</Link>
+          <h1 className="text-lg font-bold">NUP Convention — Admin</h1>
+        </div>
+        <div className="flex items-center gap-4">
+          <button onClick={() => setShowPwForm(true)} className="text-sm text-blue-200 hover:text-white">
+            Change Password
+          </button>
+          <button onClick={logout} className="text-sm text-blue-200 hover:text-white">Sign out</button>
+        </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-10">
@@ -46,6 +85,53 @@ export default function AdminDashboard() {
           </Link>
         </div>
       </main>
+
+      {/* Change Password Modal */}
+      {showPwForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Change Password</h2>
+            <form onSubmit={handlePwSubmit} className="space-y-3">
+              <input
+                type="password"
+                placeholder="Current password"
+                value={pwForm.current_password}
+                onChange={e => setPwForm({ ...pwForm, current_password: e.target.value })}
+                required
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="password"
+                placeholder="New password"
+                value={pwForm.new_password}
+                onChange={e => setPwForm({ ...pwForm, new_password: e.target.value })}
+                required
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="password"
+                placeholder="Confirm new password"
+                value={pwForm.confirm}
+                onChange={e => setPwForm({ ...pwForm, confirm: e.target.value })}
+                required
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {pwError && <p className="text-red-500 text-sm">{pwError}</p>}
+              {pwSuccess && <p className="text-green-600 text-sm">{pwSuccess}</p>}
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => { setShowPwForm(false); setPwError(''); setPwSuccess('') }}
+                  className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button type="submit" disabled={changePwMutation.isPending}
+                  className="flex-1 bg-blue-700 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-800 disabled:opacity-50">
+                  {changePwMutation.isPending ? 'Saving...' : 'Change Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
