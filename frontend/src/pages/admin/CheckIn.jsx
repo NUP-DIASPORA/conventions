@@ -3,15 +3,23 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { getRegistrants, checkIn, getCheckinStats } from '../../services/api'
 import { Link } from 'react-router-dom'
 
-// Conference starts August 12 = day 1
+// Convention: Aug 13 = day 1 … Aug 16 = day 4
 function getCurrentDay() {
-  const start = new Date('2026-08-12')
+  const start = new Date('2026-08-13')
   const today = new Date()
   const diff = Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1
-  return Math.min(Math.max(diff, 1), 7)
+  return Math.min(Math.max(diff, 1), 4)
+}
+
+const DAY_LABELS = {
+  1: 'Day 1 — Wed Aug 13',
+  2: 'Day 2 — Thu Aug 14',
+  3: 'Day 3 — Fri Aug 15',
+  4: 'Day 4 — Sat Aug 16',
 }
 
 export default function AdminCheckIn() {
+  const [eventType, setEventType] = useState('convention')  // 'convention' | 'boat_cruise'
   const [search, setSearch] = useState('')
   const [conferenceDay, setConferenceDay] = useState(getCurrentDay())
   const [successMsg, setSuccessMsg] = useState('')
@@ -30,9 +38,10 @@ export default function AdminCheckIn() {
   })
 
   const checkInMutation = useMutation({
-    mutationFn: ({ registrantId }) => checkIn(registrantId, conferenceDay),
+    mutationFn: ({ registrantId }) =>
+      checkIn(registrantId, eventType, eventType === 'convention' ? conferenceDay : null),
     onSuccess: () => {
-      setSuccessMsg('Checked in successfully!')
+      setSuccessMsg(`Checked in for ${eventType === 'boat_cruise' ? 'Boat Cruise' : DAY_LABELS[conferenceDay]}!`)
       setSearch('')
       setErrorMsg('')
       setTimeout(() => setSuccessMsg(''), 3000)
@@ -43,6 +52,16 @@ export default function AdminCheckIn() {
     },
   })
 
+  const isAlreadyCheckedIn = (r) => {
+    if (eventType === 'boat_cruise') return r.boat_cruise_checked_in
+    return r.checked_in  // simplified — full day-by-day truth is in check_ins table
+  }
+
+  const canCheckIn = (r) => {
+    if (eventType === 'boat_cruise') return r.boat_cruise
+    return r.convention
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-blue-800 text-white px-6 py-4 flex items-center gap-4">
@@ -52,22 +71,83 @@ export default function AdminCheckIn() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8">
-        {/* Day selector */}
-        <div className="mb-6 flex items-center gap-3">
-          <label className="text-sm font-medium text-gray-700">Conference Day:</label>
-          <select
-            value={conferenceDay}
-            onChange={e => setConferenceDay(Number(e.target.value))}
-            className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+
+        {/* Event type tabs */}
+        <div className="flex rounded-xl overflow-hidden border border-gray-200 mb-6 bg-white shadow-sm">
+          <button
+            onClick={() => { setEventType('convention'); setSearch(''); setErrorMsg(''); setSuccessMsg('') }}
+            className={`flex-1 py-3 text-sm font-semibold transition ${
+              eventType === 'convention'
+                ? 'bg-[#0a1c46] text-white'
+                : 'text-gray-500 hover:bg-gray-50'
+            }`}
           >
-            {[1,2,3,4,5,6,7].map(d => <option key={d} value={d}>Day {d}</option>)}
-          </select>
-          {stats && (
-            <span className="ml-auto text-sm text-gray-500">
-              {stats.checkins_by_day[`day_${conferenceDay}`]} checked in today · {stats.total_registrants} total
-            </span>
-          )}
+            🏛️ Convention
+          </button>
+          <button
+            onClick={() => { setEventType('boat_cruise'); setSearch(''); setErrorMsg(''); setSuccessMsg('') }}
+            className={`flex-1 py-3 text-sm font-semibold transition ${
+              eventType === 'boat_cruise'
+                ? 'bg-cyan-600 text-white'
+                : 'text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            ⛵ Boat Cruise
+          </button>
         </div>
+
+        {/* Stats bar */}
+        {stats && (
+          <div className="flex gap-4 mb-6 text-sm text-gray-600">
+            {eventType === 'convention' ? (
+              <>
+                <span className="bg-white rounded-lg px-3 py-2 shadow-sm border">
+                  <strong>{stats.convention_checkins}</strong> checked in (convention)
+                </span>
+                <span className="bg-white rounded-lg px-3 py-2 shadow-sm border">
+                  <strong>{stats.checkins_by_day?.[`day_${conferenceDay}`] ?? 0}</strong> today
+                </span>
+                <span className="bg-white rounded-lg px-3 py-2 shadow-sm border">
+                  <strong>{stats.convention_registrants}</strong> registered
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="bg-white rounded-lg px-3 py-2 shadow-sm border">
+                  <strong>{stats.boat_cruise_checkins}</strong> checked in (cruise)
+                </span>
+                <span className="bg-white rounded-lg px-3 py-2 shadow-sm border">
+                  <strong>{stats.boat_cruise_registrants}</strong> registered
+                </span>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Day selector (convention only) */}
+        {eventType === 'convention' && (
+          <div className="mb-5 flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-700">Day:</label>
+            <div className="flex gap-2 flex-wrap">
+              {[1, 2, 3, 4].map(d => (
+                <button key={d} onClick={() => setConferenceDay(d)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition ${
+                    conferenceDay === d
+                      ? 'bg-[#0a1c46] text-white border-[#0a1c46]'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                  }`}>
+                  {DAY_LABELS[d]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {eventType === 'boat_cruise' && (
+          <div className="mb-5 bg-cyan-50 border border-cyan-100 rounded-lg px-4 py-2 text-sm text-cyan-700">
+            Saturday Aug 15 · Heroes Celebration Cruise
+          </div>
+        )}
 
         {/* Search */}
         <div className="bg-white rounded-xl shadow p-6">
@@ -81,32 +161,52 @@ export default function AdminCheckIn() {
             autoFocus
           />
 
-          {/* Results */}
           {search.length > 1 && (
             <div className="mt-3 space-y-2">
-              {registrants.length === 0 && <p className="text-gray-400 text-sm py-4 text-center">No results found.</p>}
-              {registrants.map(r => (
-                <div key={r.id} className="flex items-center justify-between border border-gray-100 rounded-lg px-4 py-3">
-                  <div>
-                    <p className="font-medium text-gray-800">{r.first_name} {r.last_name}</p>
-                    <p className="text-xs text-gray-500">{r.email} · <span className="capitalize">{r.ticket_type}</span></p>
+              {registrants.length === 0 && (
+                <p className="text-gray-400 text-sm py-4 text-center">No results found.</p>
+              )}
+              {registrants.map(r => {
+                const eligible = canCheckIn(r)
+                const alreadyIn = isAlreadyCheckedIn(r)
+                return (
+                  <div key={r.id} className={`flex items-center justify-between border rounded-lg px-4 py-3 ${
+                    !eligible ? 'border-gray-100 opacity-60' : 'border-gray-200'
+                  }`}>
+                    <div>
+                      <p className="font-medium text-gray-800">{r.first_name} {r.last_name}</p>
+                      <p className="text-xs text-gray-500">{r.email}</p>
+                      {!eligible && (
+                        <p className="text-xs text-orange-500 mt-0.5">
+                          Not registered for {eventType === 'boat_cruise' ? 'boat cruise' : 'convention'}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => checkInMutation.mutate({ registrantId: r.id })}
+                      disabled={checkInMutation.isPending || alreadyIn || !eligible}
+                      className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${
+                        alreadyIn
+                          ? 'bg-gray-100 text-gray-400 cursor-default'
+                          : !eligible
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : eventType === 'boat_cruise'
+                          ? 'bg-cyan-600 hover:bg-cyan-700 text-white'
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                      }`}
+                    >
+                      {alreadyIn ? '✓ Checked In' : 'Check In'}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => checkInMutation.mutate({ registrantId: r.id })}
-                    disabled={checkInMutation.isPending}
-                    className="bg-green-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
-                  >
-                    Check In
-                  </button>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
 
         {successMsg && (
           <div className="mt-4 bg-green-50 border border-green-200 text-green-700 rounded-lg px-4 py-3 text-sm">
-            {successMsg}
+            ✓ {successMsg}
           </div>
         )}
         {errorMsg && (
