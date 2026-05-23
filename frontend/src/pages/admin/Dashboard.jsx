@@ -142,6 +142,7 @@ export default function AdminDashboard() {
 function StatCard({ label, value, color }) {
   const colors = {
     blue: 'bg-blue-50 text-blue-700',
+    cyan: 'bg-cyan-50 text-cyan-700',
     green: 'bg-green-50 text-green-700',
     gray: 'bg-gray-100 text-gray-600',
   }
