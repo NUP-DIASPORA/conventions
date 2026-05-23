@@ -16,11 +16,51 @@ class AdminCreate(BaseModel):
     full_name: str
     password: str
 
+class ChangePassword(BaseModel):
+    current_password: str
+    new_password: str
+
 class AdminOut(BaseModel):
     id: int
     email: str
     full_name: str
     is_active: bool
+    class Config:
+        from_attributes = True
+
+
+# --- Payments ---
+class PaymentInline(BaseModel):
+    """Embedded in RegistrantCreate to record payments at registration time."""
+    product_type: str          # "convention", "boat_cruise", "donation"
+    installment: Optional[int] = None   # 1 or 2; null = full payment
+    amount: str
+    payer_name: Optional[str] = None
+    stripe_pi_id: Optional[str] = None
+    paid_at: Optional[datetime] = None
+    notes: Optional[str] = None
+
+class PaymentCreate(BaseModel):
+    registrant_id: int
+    product_type: str
+    installment: Optional[int] = None
+    amount: str
+    payer_name: Optional[str] = None
+    stripe_pi_id: Optional[str] = None
+    paid_at: Optional[datetime] = None
+    notes: Optional[str] = None
+
+class PaymentOut(BaseModel):
+    id: int
+    registrant_id: int
+    product_type: str
+    installment: Optional[int]
+    amount: str
+    payer_name: Optional[str]
+    stripe_pi_id: Optional[str]
+    paid_at: Optional[datetime]
+    notes: Optional[str]
+    created_at: datetime
     class Config:
         from_attributes = True
 
@@ -36,12 +76,10 @@ class RegistrantCreate(BaseModel):
     state: Optional[str] = None
     country: Optional[str] = None
     continent: Optional[str] = None
-    age_group: str = "adult"  # child, youth, adult
-    product_id: Optional[str] = None
-    product_name: Optional[str] = None
-    payment_amount: Optional[str] = None
-    payer_name: Optional[str] = None
-    ticket_type: Optional[str] = "general"
+    age_group: str = "adult"           # child, youth, adult
+    convention: bool = False            # registered for convention
+    boat_cruise: bool = False           # registered for boat cruise
+    payments: List[PaymentInline] = []  # payments to record at registration time
     notes: Optional[str] = None
 
 class RegistrantUpdate(BaseModel):
@@ -54,12 +92,10 @@ class RegistrantUpdate(BaseModel):
     country: Optional[str] = None
     continent: Optional[str] = None
     age_group: Optional[str] = None
-    product_id: Optional[str] = None
-    product_name: Optional[str] = None
-    payment_amount: Optional[str] = None
-    payer_name: Optional[str] = None
-    ticket_type: Optional[str] = None
+    convention: Optional[bool] = None
+    boat_cruise: Optional[bool] = None
     checked_in: Optional[bool] = None
+    boat_cruise_checked_in: Optional[bool] = None
     notes: Optional[str] = None
 
 class RegistrantOut(BaseModel):
@@ -74,16 +110,15 @@ class RegistrantOut(BaseModel):
     country: Optional[str]
     continent: Optional[str]
     age_group: str
-    product_id: Optional[str]
-    product_name: Optional[str]
-    payment_amount: Optional[str]
-    payer_name: Optional[str]
-    ticket_type: str
+    convention: bool
+    boat_cruise: bool
     checked_in: bool
+    boat_cruise_checked_in: bool
     entered_by: Optional[str]
     entered_at: datetime
     registered_at: datetime
     notes: Optional[str]
+    payments: List[PaymentOut] = []
     class Config:
         from_attributes = True
 
@@ -91,13 +126,15 @@ class RegistrantOut(BaseModel):
 # --- Check-ins ---
 class CheckInCreate(BaseModel):
     registrant_id: int
-    conference_day: int
+    event_type: str = "convention"        # "convention" or "boat_cruise"
+    conference_day: Optional[int] = None  # 1-4 for convention; omit for boat cruise
 
 class CheckInOut(BaseModel):
     id: int
     registrant_id: int
+    event_type: str
+    conference_day: Optional[int]
     checked_in_at: datetime
-    conference_day: int
     checked_in_by: Optional[str]
     class Config:
         from_attributes = True
