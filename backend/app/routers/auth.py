@@ -22,8 +22,12 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 
 @router.post("/register", response_model=schemas.AdminOut)
-def register_admin(admin_in: schemas.AdminCreate, db: Session = Depends(get_db)):
-    """Create the first admin. In production, protect this or remove it."""
+def register_admin(
+    admin_in: schemas.AdminCreate,
+    db: Session = Depends(get_db),
+    current_admin=Depends(get_current_admin),  # must be logged in
+):
+    """Only an existing authenticated admin can create new admins."""
     existing = db.query(models.Admin).filter(models.Admin.email == admin_in.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -41,3 +45,16 @@ def register_admin(admin_in: schemas.AdminCreate, db: Session = Depends(get_db))
 @router.get("/me", response_model=schemas.AdminOut)
 def get_me(current_admin=Depends(get_current_admin)):
     return current_admin
+
+
+@router.post("/change-password")
+def change_password(
+    payload: schemas.ChangePassword,
+    db: Session = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    if not verify_password(payload.current_password, current_admin.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    current_admin.hashed_password = get_password_hash(payload.new_password)
+    db.commit()
+    return {"message": "Password changed successfully"}
