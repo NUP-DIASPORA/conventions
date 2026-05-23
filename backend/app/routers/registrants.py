@@ -14,7 +14,8 @@ def list_registrants(
     skip: int = 0,
     limit: int = 100,
     search: Optional[str] = Query(None, description="Search by name or email"),
-    ticket_type: Optional[str] = None,
+    convention: Optional[bool] = None,
+    boat_cruise: Optional[bool] = None,
     db: Session = Depends(get_db),
     _=Depends(get_current_admin),
 ):
@@ -25,8 +26,10 @@ def list_registrants(
             (models.Registrant.last_name.ilike(f"%{search}%")) |
             (models.Registrant.email.ilike(f"%{search}%"))
         )
-    if ticket_type:
-        query = query.filter(models.Registrant.ticket_type == ticket_type)
+    if convention is not None:
+        query = query.filter(models.Registrant.convention == convention)
+    if boat_cruise is not None:
+        query = query.filter(models.Registrant.boat_cruise == boat_cruise)
     return query.offset(skip).limit(limit).all()
 
 
@@ -36,21 +39,35 @@ def create_registrant(
     db: Session = Depends(get_db),
     current_admin=Depends(get_current_admin),
 ):
-    existing = db.query(models.Registrant).filter(models.Registrant.email == registrant_in.email).first()
+    existing = db.query(models.Registrant).filter(
+        models.Registrant.email == registrant_in.email
+    ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    registrant = models.Registrant(**registrant_in.model_dump(), entered_by=current_admin.email)
+    payments_data = registrant_in.payments
+    registrant_data = registrant_in.model_dump(exclude={"payments"})
+
+    registrant = models.Registrant(**registrant_data, entered_by=current_admin.email)
     db.add(registrant)
     db.commit()
     db.refresh(registrant)
 
+    # Create any inline payments
+    for p in payments_data:
+        payment = models.Payment(registrant_id=registrant.id, **p.model_dump())
+        db.add(payment)
+        if p.product_type == "convention":
+            registrant.convention = True
+        elif p.product_type == "boat_cruise":
+            registrant.boat_cruise = True
+
     # Generate QR code
     qr_data = get_registrant_qr_data(registrant.id, registrant.email)
     registrant.qr_code = generate_qr_code(qr_data)
+
     db.commit()
     db.refresh(registrant)
-
     return registrant
 
 
@@ -60,7 +77,9 @@ def get_registrant(
     db: Session = Depends(get_db),
     _=Depends(get_current_admin),
 ):
-    registrant = db.query(models.Registrant).filter(models.Registrant.id == registrant_id).first()
+    registrant = db.query(models.Registrant).filter(
+        models.Registrant.id == registrant_id
+    ).first()
     if not registrant:
         raise HTTPException(status_code=404, detail="Registrant not found")
     return registrant
@@ -73,7 +92,9 @@ def update_registrant(
     db: Session = Depends(get_db),
     _=Depends(get_current_admin),
 ):
-    registrant = db.query(models.Registrant).filter(models.Registrant.id == registrant_id).first()
+    registrant = db.query(models.Registrant).filter(
+        models.Registrant.id == registrant_id
+    ).first()
     if not registrant:
         raise HTTPException(status_code=404, detail="Registrant not found")
     for field, value in updates.model_dump(exclude_unset=True).items():
@@ -89,7 +110,9 @@ def delete_registrant(
     db: Session = Depends(get_db),
     _=Depends(get_current_admin),
 ):
-    registrant = db.query(models.Registrant).filter(models.Registrant.id == registrant_id).first()
+    registrant = db.query(models.Registrant).filter(
+        models.Registrant.id == registrant_id
+    ).first()
     if not registrant:
         raise HTTPException(status_code=404, detail="Registrant not found")
     db.delete(registrant)
@@ -102,7 +125,9 @@ def get_qr_code(
     db: Session = Depends(get_db),
     _=Depends(get_current_admin),
 ):
-    registrant = db.query(models.Registrant).filter(models.Registrant.id == registrant_id).first()
+    registrant = db.query(models.Registrant).filter(
+        models.Registrant.id == registrant_id
+    ).first()
     if not registrant:
         raise HTTPException(status_code=404, detail="Registrant not found")
     return {"qr_code": registrant.qr_code}
