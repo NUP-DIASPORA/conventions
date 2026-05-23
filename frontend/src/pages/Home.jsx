@@ -102,11 +102,11 @@ export default function Home() {
           </div>
 
           {/* Countdown */}
-          <div className="flex items-center gap-4 mb-10">
+          <div className="flex items-center gap-3 mb-10">
             {[{ v: days, l: 'DAYS' }, { v: hours, l: 'HOURS' }, { v: minutes, l: 'MINUTES' }, { v: seconds, l: 'SECONDS' }].map(({ v, l }, i) => (
-              <div key={l} className="flex items-center gap-4">
+              <div key={l} className="flex items-center gap-3">
                 {i > 0 && <span className="text-white/20 text-xl font-light">:</span>}
-                <div className="flex flex-col items-center min-w-[60px]">
+                <div className="flex flex-col items-center bg-black/30 border border-white/10 rounded-xl px-4 py-3 min-w-[64px]">
                   <span className="text-4xl sm:text-5xl font-black tabular-nums text-white leading-none">
                     {String(v).padStart(2, '0')}
                   </span>
