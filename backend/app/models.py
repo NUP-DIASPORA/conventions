@@ -27,21 +27,42 @@ class Registrant(Base):
     city = Column(String, nullable=True)
     state = Column(String, nullable=True)
     country = Column(String, nullable=True)
-    continent = Column(String, nullable=True)  # Africa, North America, Europe, Asia, Oceania, South America
+    continent = Column(String, nullable=True)
     age_group = Column(String, nullable=False, default="adult")  # child, youth, adult
-    product_id = Column(String, nullable=True)
-    product_name = Column(String, nullable=True)
-    payment_amount = Column(String, nullable=True)  # stored as string to avoid float rounding issues
-    payer_name = Column(String, nullable=True)  # name of person who made the payment, if different from attendee
-    ticket_type = Column(String, default="general")  # general, vip, speaker, staff
+
+    # What they registered for
+    convention = Column(Boolean, default=False)       # paid for 4-day convention
+    boat_cruise = Column(Boolean, default=False)      # paid for Saturday boat cruise
+
+    # Check-in flags (convenience — source of truth is check_ins table)
     checked_in = Column(Boolean, default=False)
-    entered_by = Column(String, nullable=True)   # admin email who created this record
+    boat_cruise_checked_in = Column(Boolean, default=False)
+
+    entered_by = Column(String, nullable=True)
     entered_at = Column(DateTime(timezone=True), server_default=func.now())
-    qr_code = Column(Text, nullable=True)  # base64 encoded QR image
+    qr_code = Column(Text, nullable=True)
     registered_at = Column(DateTime(timezone=True), server_default=func.now())
     notes = Column(Text, nullable=True)
 
-    check_ins = relationship("CheckIn", back_populates="registrant")
+    payments = relationship("Payment", back_populates="registrant", cascade="all, delete-orphan")
+    check_ins = relationship("CheckIn", back_populates="registrant", cascade="all, delete-orphan")
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    registrant_id = Column(Integer, ForeignKey("registrants.id"), nullable=False)
+    product_type = Column(String, nullable=False)  # "convention", "boat_cruise", "donation"
+    installment = Column(Integer, nullable=True)   # 1 or 2; null = full payment
+    amount = Column(String, nullable=False)        # e.g. "300.00"
+    payer_name = Column(String, nullable=True)     # if someone else paid
+    stripe_pi_id = Column(String, nullable=True)
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+    notes = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    registrant = relationship("Registrant", back_populates="payments")
 
 
 class CheckIn(Base):
@@ -49,9 +70,10 @@ class CheckIn(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     registrant_id = Column(Integer, ForeignKey("registrants.id"), nullable=False)
+    event_type = Column(String, nullable=False, default="convention")  # "convention" | "boat_cruise"
+    conference_day = Column(Integer, nullable=True)   # 1-4 for convention; null for boat cruise
     checked_in_at = Column(DateTime(timezone=True), server_default=func.now())
-    conference_day = Column(Integer, nullable=False)  # 1-7
-    checked_in_by = Column(String, nullable=True)  # admin email
+    checked_in_by = Column(String, nullable=True)
 
     registrant = relationship("Registrant", back_populates="check_ins")
 
@@ -82,7 +104,7 @@ class ProgramSession(Base):
     session_date = Column(Date, nullable=False)
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
-    location = Column(String, nullable=True)  # room/hall name
+    location = Column(String, nullable=True)
     session_type = Column(String, default="talk")  # talk, workshop, panel, break, plenary
     speaker_id = Column(Integer, ForeignKey("speakers.id"), nullable=True)
     is_public = Column(Boolean, default=True)
