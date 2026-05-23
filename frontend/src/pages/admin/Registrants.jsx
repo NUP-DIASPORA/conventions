@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getRegistrants, createRegistrant, deleteRegistrant } from '../../services/api'
+import { getRegistrants, createRegistrant, deleteRegistrant, createPayment, deletePayment } from '../../services/api'
 import { Link } from 'react-router-dom'
 
 const COUNTRIES = [
@@ -32,43 +32,27 @@ function CountrySelect({ value, onChange }) {
   const [query, setQuery] = useState(value || '')
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
-
   const filtered = query.length === 0
     ? COUNTRIES
     : COUNTRIES.filter(c => c.toLowerCase().startsWith(query.toLowerCase()))
-
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
-
-  const select = (country) => {
-    setQuery(country)
-    onChange(country)
-    setOpen(false)
-  }
-
+  const select = (country) => { setQuery(country); onChange(country); setOpen(false) }
   return (
     <div ref={ref} className="relative">
-      <input
-        type="text"
-        placeholder="Country"
-        value={query}
+      <input type="text" placeholder="Country" value={query}
         onChange={e => { setQuery(e.target.value); onChange(e.target.value); setOpen(true) }}
         onFocus={() => setOpen(true)}
         className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        autoComplete="off"
-      />
+        autoComplete="off" />
       {open && filtered.length > 0 && (
         <ul className="absolute z-50 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto mt-1 text-sm">
           {filtered.slice(0, 50).map(c => (
-            <li key={c}
-              onMouseDown={() => select(c)}
-              className="px-3 py-2 cursor-pointer hover:bg-blue-50 hover:text-blue-700"
-            >
-              {c}
-            </li>
+            <li key={c} onMouseDown={() => select(c)}
+              className="px-3 py-2 cursor-pointer hover:bg-blue-50 hover:text-blue-700">{c}</li>
           ))}
         </ul>
       )}
@@ -76,16 +60,42 @@ function CountrySelect({ value, onChange }) {
   )
 }
 
+// Pricing reference
+const PRICES = {
+  convention_adult: '300.00',
+  convention_child: '160.00',
+  convention_installment: '150.00',
+  boat_cruise: '220.00',
+  boat_cruise_installment: '110.00',
+}
+
+const EMPTY_PAYMENT = { product_type: '', installment: '', amount: '', payer_name: '', stripe_pi_id: '', notes: '' }
+
 const EMPTY_FORM = {
   first_name: '', last_name: '', email: '', phone: '',
   address: '', city: '', state: '', country: '', continent: '',
   age_group: 'adult',
-  product_id: '', product_name: '', payment_amount: '',
-  payer_name: '',
-  ticket_type: 'general', notes: '',
+  convention: false,
+  boat_cruise: false,
+  payments: [],
+  notes: '',
 }
 
 const CONTINENTS = ['Africa', 'North America', 'South America', 'Europe', 'Asia', 'Oceania', 'Middle East']
+
+// Summarise payments for a registrant row
+function paymentSummary(payments) {
+  if (!payments?.length) return null
+  const total = payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
+  return `$${total.toFixed(2)}`
+}
+
+function productLabel(type) {
+  if (type === 'convention') return 'Convention'
+  if (type === 'boat_cruise') return 'Boat Cruise'
+  if (type === 'donation') return 'Donation'
+  return type
+}
 
 export default function AdminRegistrants() {
   const queryClient = useQueryClient()
@@ -93,6 +103,9 @@ export default function AdminRegistrants() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState('')
+  const [newPayment, setNewPayment] = useState(EMPTY_PAYMENT)
+  // For adding a payment to an existing registrant
+  const [paymentTarget, setPaymentTarget] = useState(null) // registrant object
 
   const { data: registrants = [], isLoading } = useQuery({
     queryKey: ['registrants', search],
@@ -115,19 +128,101 @@ export default function AdminRegistrants() {
     onSuccess: () => queryClient.invalidateQueries(['registrants']),
   })
 
+  const addPaymentMutation = useMutation({
+    mutationFn: createPayment,
+    onSuccess: () => {
+      queryClient.invalidateQueries(['registrants'])
+      setPaymentTarget(null)
+      setNewPayment(EMPTY_PAYMENT)
+    },
+    onError: (err) => alert(err.response?.data?.detail || 'Error adding payment'),
+  })
+
+  const deletePaymentMutation = useMutation({
+    mutationFn: deletePayment,
+    onSuccess: () => queryClient.invalidateQueries(['registrants']),
+  })
+
   const set = (field) => (e) => setForm({ ...form, [field]: e.target.value })
+  const setCheck = (field) => (e) => setForm({ ...form, [field]: e.target.checked })
+
+  // Auto-fill payment amount based on product type + age group
+  const defaultAmount = (productType, ageGroup, installment) => {
+    if (productType === 'convention') {
+      const base = ageGroup === 'child' ? PRICES.convention_child : PRICES.convention_adult
+      return installment ? PRICES.convention_installment : base
+    }
+    if (productType === 'boat_cruise') {
+      return installment ? PRICES.boat_cruise_installment : PRICES.boat_cruise
+    }
+    return ''
+  }
+
+  // Inline payment rows in the Add Registrant form
+  const addInlinePayment = (productType) => {
+    const installment = null
+    setForm(f => ({
+      ...f,
+      payments: [...f.payments, {
+        product_type: productType,
+        installment: installment,
+        amount: defaultAmount(productType, f.age_group, false),
+        payer_name: '',
+        stripe_pi_id: '',
+        notes: '',
+      }]
+    }))
+  }
+
+  const removeInlinePayment = (idx) => {
+    setForm(f => ({ ...f, payments: f.payments.filter((_, i) => i !== idx) }))
+  }
+
+  const updateInlinePayment = (idx, field, value) => {
+    setForm(f => {
+      const payments = f.payments.map((p, i) => {
+        if (i !== idx) return p
+        const updated = { ...p, [field]: value }
+        // Auto-update amount when type or installment changes
+        if (field === 'installment' || field === 'product_type') {
+          updated.amount = defaultAmount(
+            field === 'product_type' ? value : p.product_type,
+            f.age_group,
+            field === 'installment' ? value : p.installment
+          )
+        }
+        return updated
+      })
+      return { ...f, payments }
+    })
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
     setFormError('')
-    createMutation.mutate(form)
+    // Derive convention/boat_cruise flags from payments if not manually set
+    const hasConvention = form.convention || form.payments.some(p => p.product_type === 'convention')
+    const hasBoatCruise = form.boat_cruise || form.payments.some(p => p.product_type === 'boat_cruise')
+    createMutation.mutate({ ...form, convention: hasConvention, boat_cruise: hasBoatCruise })
   }
+
+  const handleAddPayment = (e) => {
+    e.preventDefault()
+    addPaymentMutation.mutate({
+      registrant_id: paymentTarget.id,
+      ...newPayment,
+      installment: newPayment.installment ? parseInt(newPayment.installment) : null,
+    })
+  }
+
+  const input = 'border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
 
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-blue-800 text-white px-6 py-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <Link to="/admin" className="text-blue-200 hover:text-white text-sm">← Dashboard</Link>
+          <Link to="/" className="text-blue-200 hover:text-white text-sm">← Home</Link>
+          <Link to="/admin" className="text-blue-200 hover:text-white text-sm">Dashboard</Link>
           <h1 className="text-lg font-bold">Registrants</h1>
         </div>
         <button onClick={() => setShowForm(true)} className="bg-white text-blue-800 px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-50">
@@ -136,13 +231,9 @@ export default function AdminRegistrants() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <input
-          type="text"
-          placeholder="Search by name or email..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <input type="text" placeholder="Search by name or email..."
+          value={search} onChange={e => setSearch(e.target.value)}
+          className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
 
         {isLoading && <p className="text-gray-400 text-center py-10">Loading...</p>}
 
@@ -153,16 +244,11 @@ export default function AdminRegistrants() {
                 <th className="px-4 py-3 text-left">Attendee</th>
                 <th className="px-4 py-3 text-left">Contact</th>
                 <th className="px-4 py-3 text-left">Location</th>
-                <th className="px-4 py-3 text-left">Country</th>
-                <th className="px-4 py-3 text-left">Continent</th>
-                <th className="px-4 py-3 text-left">Age Group</th>
-                <th className="px-4 py-3 text-left">Product</th>
-                <th className="px-4 py-3 text-left">Payment</th>
-                <th className="px-4 py-3 text-left">Paid By</th>
-                <th className="px-4 py-3 text-left">Ticket</th>
-                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-left">Age</th>
+                <th className="px-4 py-3 text-left">Registered For</th>
+                <th className="px-4 py-3 text-left">Payments</th>
+                <th className="px-4 py-3 text-left">Check-in</th>
                 <th className="px-4 py-3 text-left">Entered By</th>
-                <th className="px-4 py-3 text-left">Entered At</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -178,75 +264,98 @@ export default function AdminRegistrants() {
                     {r.phone && <p className="text-xs text-gray-400">{r.phone}</p>}
                   </td>
                   <td className="px-4 py-3 text-gray-500">
-                    {[r.city, r.state].filter(Boolean).join(', ') || '—'}
+                    <p>{[r.city, r.state].filter(Boolean).join(', ') || '—'}</p>
+                    {r.country && <p className="text-xs text-gray-400">{r.country}</p>}
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{r.country || '—'}</td>
-                  <td className="px-4 py-3 text-gray-500">{r.continent || '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                       r.age_group === 'child' ? 'bg-pink-50 text-pink-600' :
                       r.age_group === 'youth' ? 'bg-purple-50 text-purple-600' :
                       'bg-gray-100 text-gray-600'
-                    }`}>
-                      {r.age_group}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {r.product_name || '—'}
-                    {r.product_id && <p className="text-xs text-gray-400">#{r.product_id}</p>}
-                  </td>
-                  <td className="px-4 py-3 text-gray-700 font-medium">
-                    {r.payment_amount ? `$${r.payment_amount}` : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {r.payer_name || <span className="text-gray-300">—</span>}
+                    }`}>{r.age_group}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs">{r.ticket_type}</span>
+                    <div className="flex flex-col gap-1">
+                      {r.convention && (
+                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs w-fit">Convention</span>
+                      )}
+                      {r.boat_cruise && (
+                        <span className="px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded-full text-xs w-fit">Boat Cruise</span>
+                      )}
+                      {!r.convention && !r.boat_cruise && (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
-                    {r.checked_in
-                      ? <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">Checked in</span>
-                      : <span className="px-2 py-0.5 bg-gray-100 text-gray-400 rounded-full text-xs">Pending</span>
-                    }
+                    <div className="flex flex-col gap-0.5">
+                      {r.payments?.map(p => (
+                        <div key={p.id} className="flex items-center gap-1 group">
+                          <span className="text-xs text-gray-600">
+                            {productLabel(p.product_type)}
+                            {p.installment ? ` (inst. ${p.installment})` : ''} — ${p.amount}
+                          </span>
+                          <button
+                            onClick={() => { if (window.confirm('Remove this payment?')) deletePaymentMutation.mutate(p.id) }}
+                            className="text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 text-xs ml-1">✕</button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => { setPaymentTarget(r); setNewPayment(EMPTY_PAYMENT) }}
+                        className="text-xs text-blue-500 hover:text-blue-700 mt-0.5 text-left">
+                        + Add payment
+                      </button>
+                    </div>
+                    {r.payments?.length > 0 && (
+                      <p className="text-xs font-semibold text-gray-700 mt-1">
+                        Total: {paymentSummary(r.payments)}
+                      </p>
+                    )}
                   </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{r.entered_by || '—'}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">
-                    {r.entered_at ? new Date(r.entered_at).toLocaleString() : '—'}
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      {r.convention && (
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${r.checked_in ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                          Conv: {r.checked_in ? 'In' : 'Pending'}
+                        </span>
+                      )}
+                      {r.boat_cruise && (
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${r.boat_cruise_checked_in ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                          Cruise: {r.boat_cruise_checked_in ? 'In' : 'Pending'}
+                        </span>
+                      )}
+                    </div>
                   </td>
+                  <td className="px-4 py-3 text-gray-400 text-xs">{r.entered_by || '—'}</td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => { if (window.confirm('Delete this registrant?')) deleteMutation.mutate(r.id) }}
-                      className="text-red-400 hover:text-red-600 text-xs"
-                    >
-                      Delete
-                    </button>
+                      className="text-red-400 hover:text-red-600 text-xs">Delete</button>
                   </td>
                 </tr>
               ))}
               {!isLoading && registrants.length === 0 && (
-                <tr><td colSpan={14} className="px-4 py-10 text-center text-gray-400">No registrants found.</td></tr>
+                <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">No registrants found.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </main>
 
-      {/* Add Registrant Modal */}
+      {/* ── Add Registrant Modal ── */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4 py-8 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg my-auto">
             <h2 className="text-lg font-bold text-gray-800 mb-1">Add Registrant</h2>
             <p className="text-xs text-gray-400 mb-4">Fields marked * are required</p>
-
             <form onSubmit={handleSubmit} className="space-y-4">
 
-              {/* Attendee name */}
+              {/* Name */}
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Attendee</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <input required placeholder="First name *" value={form.first_name} onChange={set('first_name')} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <input required placeholder="Last name *" value={form.last_name} onChange={set('last_name')} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input required placeholder="First name *" value={form.first_name} onChange={set('first_name')} className={input} />
+                  <input required placeholder="Last name *" value={form.last_name} onChange={set('last_name')} className={input} />
                 </div>
               </div>
 
@@ -254,8 +363,8 @@ export default function AdminRegistrants() {
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Contact</p>
                 <div className="space-y-2">
-                  <input required type="email" placeholder="Email *" value={form.email} onChange={set('email')} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <input placeholder="Phone" value={form.phone} onChange={set('phone')} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input required type="email" placeholder="Email *" value={form.email} onChange={set('email')} className={`w-full ${input}`} />
+                  <input placeholder="Phone" value={form.phone} onChange={set('phone')} className={`w-full ${input}`} />
                 </div>
               </div>
 
@@ -263,14 +372,14 @@ export default function AdminRegistrants() {
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Address</p>
                 <div className="space-y-2">
-                  <input placeholder="Street address" value={form.address} onChange={set('address')} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input placeholder="Street address" value={form.address} onChange={set('address')} className={`w-full ${input}`} />
                   <div className="grid grid-cols-2 gap-3">
-                    <input placeholder="City" value={form.city} onChange={set('city')} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <input placeholder="State / Province" value={form.state} onChange={set('state')} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <input placeholder="City" value={form.city} onChange={set('city')} className={input} />
+                    <input placeholder="State / Province" value={form.state} onChange={set('state')} className={input} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <CountrySelect value={form.country} onChange={val => setForm({ ...form, country: val })} />
-                    <select value={form.continent} onChange={set('continent')} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500">
+                    <select value={form.continent} onChange={set('continent')} className={input + ' text-gray-500'}>
                       <option value="">Continent</option>
                       {CONTINENTS.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
@@ -278,62 +387,145 @@ export default function AdminRegistrants() {
                 </div>
               </div>
 
-              {/* Age group & ticket */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Age Group *</p>
-                  <select required value={form.age_group} onChange={set('age_group')} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="adult">Adult</option>
-                    <option value="youth">Youth</option>
-                    <option value="child">Child</option>
-                  </select>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Ticket Type</p>
-                  <select value={form.ticket_type} onChange={set('ticket_type')} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="general">General</option>
-                    <option value="vip">VIP</option>
-                    <option value="speaker">Speaker</option>
-                    <option value="staff">Staff</option>
-                  </select>
+              {/* Age group */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Age Group *</p>
+                <select required value={form.age_group} onChange={set('age_group')} className={`w-full ${input}`}>
+                  <option value="adult">Adult</option>
+                  <option value="youth">Youth</option>
+                  <option value="child">Child</option>
+                </select>
+              </div>
+
+              {/* Products */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Registered For</p>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" checked={form.convention} onChange={setCheck('convention')}
+                      className="rounded" />
+                    Convention <span className="text-gray-400">({form.age_group === 'child' ? '$160' : '$300'})</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" checked={form.boat_cruise} onChange={setCheck('boat_cruise')}
+                      className="rounded" />
+                    Boat Cruise <span className="text-gray-400">($220)</span>
+                  </label>
                 </div>
               </div>
 
-              {/* Product & payment */}
+              {/* Payments */}
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Product & Payment</p>
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-3">
-                    <input placeholder="Product ID" value={form.product_id} onChange={set('product_id')} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <input placeholder="Product name" value={form.product_name} onChange={set('product_name')} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-xs font-semibold text-gray-500 uppercase">Payments Received</p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => addInlinePayment('convention')}
+                      className="text-xs text-blue-600 hover:text-blue-800">+ Convention</button>
+                    <button type="button" onClick={() => addInlinePayment('boat_cruise')}
+                      className="text-xs text-cyan-600 hover:text-cyan-800">+ Boat Cruise</button>
+                    <button type="button" onClick={() => addInlinePayment('donation')}
+                      className="text-xs text-green-600 hover:text-green-800">+ Donation</button>
                   </div>
-                  <input placeholder="Payment amount (e.g. 150.00)" value={form.payment_amount} onChange={set('payment_amount')} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <input
-                    placeholder="Paid by (if someone else paid)"
-                    value={form.payer_name}
-                    onChange={set('payer_name')}
-                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
                 </div>
+
+                {form.payments.length === 0 && (
+                  <p className="text-xs text-gray-400 italic">No payments recorded yet — add one above.</p>
+                )}
+
+                {form.payments.map((p, idx) => (
+                  <div key={idx} className="border rounded-lg p-3 mb-2 bg-gray-50 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-gray-700">{productLabel(p.product_type)}</span>
+                      <button type="button" onClick={() => removeInlinePayment(idx)}
+                        className="text-red-400 hover:text-red-600 text-xs">Remove</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select value={p.installment ?? ''} onChange={e => updateInlinePayment(idx, 'installment', e.target.value || null)}
+                        className={input}>
+                        <option value="">Full payment</option>
+                        <option value="1">Installment 1</option>
+                        <option value="2">Installment 2</option>
+                      </select>
+                      <input placeholder="Amount" value={p.amount}
+                        onChange={e => updateInlinePayment(idx, 'amount', e.target.value)}
+                        className={input} />
+                    </div>
+                    <input placeholder="Paid by (if someone else paid)"
+                      value={p.payer_name}
+                      onChange={e => updateInlinePayment(idx, 'payer_name', e.target.value)}
+                      className={`w-full ${input}`} />
+                    <input placeholder="Stripe PI ID (optional)"
+                      value={p.stripe_pi_id}
+                      onChange={e => updateInlinePayment(idx, 'stripe_pi_id', e.target.value)}
+                      className={`w-full ${input}`} />
+                  </div>
+                ))}
               </div>
 
               {/* Notes */}
-              <textarea
-                placeholder="Notes (optional)"
-                value={form.notes}
-                onChange={set('notes')}
-                rows={2}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              />
+              <textarea placeholder="Notes (optional)" value={form.notes} onChange={set('notes')}
+                rows={2} className={`w-full ${input} resize-none`} />
 
               {formError && <p className="text-red-500 text-sm">{formError}</p>}
 
               <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => { setShowForm(false); setForm(EMPTY_FORM); setFormError('') }} className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">
+                <button type="button"
+                  onClick={() => { setShowForm(false); setForm(EMPTY_FORM); setFormError('') }}
+                  className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">
                   Cancel
                 </button>
-                <button type="submit" disabled={createMutation.isPending} className="flex-1 bg-blue-700 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-800 disabled:opacity-50">
+                <button type="submit" disabled={createMutation.isPending}
+                  className="flex-1 bg-blue-700 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-800 disabled:opacity-50">
                   {createMutation.isPending ? 'Saving...' : 'Add Registrant'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Payment to Existing Registrant Modal ── */}
+      {paymentTarget && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+            <h2 className="text-lg font-bold text-gray-800 mb-1">Add Payment</h2>
+            <p className="text-sm text-gray-500 mb-4">{paymentTarget.first_name} {paymentTarget.last_name}</p>
+            <form onSubmit={handleAddPayment} className="space-y-3">
+              <select required value={newPayment.product_type}
+                onChange={e => setNewPayment({ ...newPayment, product_type: e.target.value })}
+                className={`w-full ${input}`}>
+                <option value="">Select product *</option>
+                <option value="convention">Convention</option>
+                <option value="boat_cruise">Boat Cruise</option>
+                <option value="donation">Donation</option>
+              </select>
+              <select value={newPayment.installment}
+                onChange={e => setNewPayment({ ...newPayment, installment: e.target.value })}
+                className={`w-full ${input}`}>
+                <option value="">Full payment</option>
+                <option value="1">Installment 1</option>
+                <option value="2">Installment 2</option>
+              </select>
+              <input required placeholder="Amount (e.g. 300.00)" value={newPayment.amount}
+                onChange={e => setNewPayment({ ...newPayment, amount: e.target.value })}
+                className={`w-full ${input}`} />
+              <input placeholder="Paid by (if different from attendee)" value={newPayment.payer_name}
+                onChange={e => setNewPayment({ ...newPayment, payer_name: e.target.value })}
+                className={`w-full ${input}`} />
+              <input placeholder="Stripe PI ID (optional)" value={newPayment.stripe_pi_id}
+                onChange={e => setNewPayment({ ...newPayment, stripe_pi_id: e.target.value })}
+                className={`w-full ${input}`} />
+              <input placeholder="Notes (optional)" value={newPayment.notes}
+                onChange={e => setNewPayment({ ...newPayment, notes: e.target.value })}
+                className={`w-full ${input}`} />
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setPaymentTarget(null)}
+                  className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button type="submit" disabled={addPaymentMutation.isPending}
+                  className="flex-1 bg-blue-700 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-800 disabled:opacity-50">
+                  {addPaymentMutation.isPending ? 'Saving...' : 'Add Payment'}
                 </button>
               </div>
             </form>
