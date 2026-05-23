@@ -62,11 +62,14 @@ export default function AdminDashboard() {
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
             <StatCard label="Total Registrants" value={stats.total_registrants} color="blue" />
-            <StatCard label="Total Check-ins" value={stats.total_checkins} color="green" />
+            <StatCard label="Convention" value={stats.convention_registrants} color="blue" />
+            <StatCard label="Boat Cruise" value={stats.boat_cruise_registrants} color="cyan" />
+            <StatCard label="Conv. Check-ins" value={stats.convention_checkins} color="green" />
+            <StatCard label="Cruise Check-ins" value={stats.boat_cruise_checkins} color="green" />
             {Object.entries(stats.checkins_by_day).map(([day, count]) => (
-              <StatCard key={day} label={`Day ${day.split('_')[1]}`} value={count} color="gray" />
+              <StatCard key={day} label={`Day ${day.split('_')[1]} Check-ins`} value={count} color="gray" />
             ))}
           </div>
         )}
