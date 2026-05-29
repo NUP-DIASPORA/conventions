@@ -62,29 +62,25 @@ export default function Home() {
 
         <div className="relative z-20 flex flex-col items-center justify-center px-4 py-16 sm:py-20 min-h-[min(88vh,880px)] max-w-3xl mx-auto">
 
-          <div className="flex items-center justify-center gap-5 mb-6">
-            <img src="/nup-logo.png" alt="NUP" className="h-14 w-14 sm:h-16 sm:w-16 object-contain drop-shadow-md" />
-            <div className="w-px h-10 bg-white/25 hidden sm:block" aria-hidden />
-            <img src="/convention-logo.png" alt="NUP Diaspora Convention" className="h-14 w-14 sm:h-16 sm:w-16 object-contain drop-shadow-md" />
-          </div>
-
           <p className="text-red-400 text-xs sm:text-sm font-bold uppercase tracking-[0.18em] mb-4">
-            NUP Diaspora Convention · Los Angeles 2026
+            Los Angeles · August 12–16, 2026
           </p>
 
-          <h1 className="text-4xl sm:text-6xl lg:text-[4.25rem] font-black leading-[1.08] mb-3">
-            <span className="text-white">National Unity Platform</span>
-            <span className="block text-red-500 mt-0.5">Diaspora</span>
+          <h1 className="text-4xl sm:text-6xl lg:text-[4.25rem] font-black leading-[1.08] mb-2">
+            <span className="text-red-500">NUP</span>{' '}
+            <span className="text-white">Diaspora Convention</span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-white/95 font-medium mb-5">
+          <p className="text-base sm:text-lg text-white/80 mb-4">
+            National Unity Platform
+          </p>
+
+          <p className="text-lg sm:text-xl text-white font-medium mb-5">
             United for a Free Uganda
           </p>
 
-          <p className="text-sm sm:text-base text-white mb-8">
-            <span className="font-semibold">August 12–16, 2026</span>
-            <span className="mx-2 text-white/40" aria-hidden>·</span>
-            <span>Hilton Los Angeles Airport Hotel</span>
+          <p className="text-sm sm:text-base text-white/90 mb-8">
+            Hilton Los Angeles Airport Hotel
           </p>
 
           <div
