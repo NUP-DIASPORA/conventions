@@ -174,6 +174,7 @@ export default function AdminRegistrants() {
     setEditForm({
       first_name: r.first_name,
       last_name: r.last_name,
+      email: r.email || '',
       phone: r.phone || '',
       address: r.address || '',
       city: r.city || '',
@@ -822,8 +823,12 @@ export default function AdminRegistrants() {
 
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Contact</p>
-                <input placeholder="Phone" value={editForm.phone}
-                  onChange={e => setEditForm({ ...editForm, phone: e.target.value })} className={`w-full ${input}`} />
+                <div className="space-y-2">
+                  <input type="email" placeholder="Email" value={editForm.email}
+                    onChange={e => setEditForm({ ...editForm, email: e.target.value })} className={`w-full ${input}`} />
+                  <input placeholder="Phone" value={editForm.phone}
+                    onChange={e => setEditForm({ ...editForm, phone: e.target.value })} className={`w-full ${input}`} />
+                </div>
               </div>
 
               <div>
