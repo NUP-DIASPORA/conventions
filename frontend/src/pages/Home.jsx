@@ -3,13 +3,7 @@ import { Link } from 'react-router-dom'
 
 const CONVENTION_DATE = new Date('2026-08-12T00:00:00')
 
-const HERO_IMAGES = [
-  '/hotel1.jpg',
-  '/hotel2.jpg',
-  '/hotel3.jpg',
-  '/hotelClaire.jpeg',
-  '/boat8.jpg',
-]
+const HERO_IMAGES = ['/hotel1.jpg', '/hotel2.jpg', '/hotel3.jpg', '/boat8.jpg']
 
 function calcTimeLeft(target) {
   const diff = target - Date.now()
@@ -36,9 +30,10 @@ export default function Home() {
   const [heroIndex, setHeroIndex] = useState(0)
 
   useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const id = setInterval(() => {
       setHeroIndex(i => (i + 1) % HERO_IMAGES.length)
-    }, 5000)
+    }, 8000)
     return () => clearInterval(id)
   }, [])
 
@@ -46,97 +41,110 @@ export default function Home() {
     <div className="min-h-screen bg-white">
 
       {/* ─── HERO ─── */}
-      <section className="relative text-white text-center overflow-hidden" style={{ minHeight: '92vh' }}>
+      <section className="relative text-white text-center overflow-hidden min-h-[min(88vh,880px)]">
 
-        {/* Slideshow images */}
         {HERO_IMAGES.map((src, i) => (
           <div
             key={src}
-            className="absolute inset-0 bg-cover bg-center"
+            aria-hidden={i !== heroIndex}
+            className="absolute inset-0 bg-cover bg-center scale-[1.03]"
             style={{
               backgroundImage: `url(${src})`,
               opacity: i === heroIndex ? 1 : 0,
-              transition: 'opacity 1.2s ease-in-out',
+              transition: 'opacity 1.4s ease-in-out',
               zIndex: 0,
             }}
           />
         ))}
 
-        {/* Dark overlay so text reads cleanly without needing shadows */}
-        <div className="absolute inset-0 bg-black/55 z-10" />
+        <div className="absolute inset-0 bg-black/50 z-10" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/50 to-black/75 z-10" />
 
-        {/* Red top accent bar */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-red-600 z-20" />
+        <div className="relative z-20 flex flex-col items-center justify-center px-4 py-16 sm:py-20 min-h-[min(88vh,880px)] max-w-3xl mx-auto">
 
-        {/* Hero content */}
-        <div className="relative z-20 flex flex-col items-center justify-center px-4 py-16" style={{ minHeight: '92vh' }}>
-
-          {/* Logos */}
-          <div className="flex items-center justify-center gap-6 mb-8">
-            <img src="/nup-logo.png" alt="NUP" className="h-16 w-16 object-contain" />
-            <div className="w-px h-12 bg-white/20 hidden sm:block" />
-            <img src="/convention-logo.png" alt="Convention" className="h-16 w-16 object-contain" />
+          <div className="flex items-center justify-center gap-5 mb-6">
+            <img src="/nup-logo.png" alt="NUP" className="h-14 w-14 sm:h-16 sm:w-16 object-contain drop-shadow-md" />
+            <div className="w-px h-10 bg-white/25 hidden sm:block" aria-hidden />
+            <img src="/convention-logo.png" alt="NUP Diaspora Convention" className="h-14 w-14 sm:h-16 sm:w-16 object-contain drop-shadow-md" />
           </div>
 
-          {/* Badge */}
-          <span className="inline-block bg-red-600 text-white text-xs font-bold px-3 py-1 rounded mb-5 tracking-wide">
-            NUP Diaspora Convention 2026
-          </span>
+          <p className="text-red-400 text-xs sm:text-sm font-bold uppercase tracking-[0.18em] mb-4">
+            NUP Diaspora Convention · Los Angeles 2026
+          </p>
 
-          {/* Title */}
-          <h1 className="text-5xl sm:text-7xl font-black text-white leading-tight mb-2">
-            National Unity Platform
+          <h1 className="text-4xl sm:text-6xl lg:text-[4.25rem] font-black leading-[1.08] mb-3">
+            <span className="text-white">National Unity Platform</span>
+            <span className="block text-red-500 mt-0.5">Diaspora</span>
           </h1>
-          <h1 className="text-5xl sm:text-7xl font-black text-red-500 leading-tight mb-4">
-            Diaspora
-          </h1>
-          <p className="text-base text-white mb-1 max-w-lg">
+
+          <p className="text-lg sm:text-xl text-white/95 font-medium mb-5">
             United for a Free Uganda
           </p>
 
-          {/* Date + venue */}
-          <div className="flex items-center gap-2 text-blue-400/60 text-sm mb-10">
-            <span>📅 August 12–16, 2026</span>
-            <span className="mx-1 text-white/30">·</span>
-            <span>🏨 Hilton Los Angeles Airport Hotel</span>
-          </div>
+          <p className="text-sm sm:text-base text-white mb-8">
+            <span className="font-semibold">August 12–16, 2026</span>
+            <span className="mx-2 text-white/40" aria-hidden>·</span>
+            <span>Hilton Los Angeles Airport Hotel</span>
+          </p>
 
-          {/* Countdown */}
-          <div className="flex items-center gap-3 mb-10">
-            {[{ v: days, l: 'DAYS' }, { v: hours, l: 'HOURS' }, { v: minutes, l: 'MINUTES' }, { v: seconds, l: 'SECONDS' }].map(({ v, l }, i) => (
-              <div key={l} className="flex items-center gap-3">
-                {i > 0 && <span className="text-white/20 text-xl font-light">:</span>}
-                <div className="flex flex-col items-center bg-black/30 border border-white/10 rounded-xl px-4 py-3 min-w-[64px]">
-                  <span className="text-4xl sm:text-5xl font-black tabular-nums text-white leading-none">
-                    {String(v).padStart(2, '0')}
-                  </span>
-                  <span className="text-[10px] text-blue-400/60 tracking-widest mt-1.5 uppercase">{l}</span>
-                </div>
+          <div
+            className="grid grid-cols-4 gap-2 sm:gap-3 w-full max-w-md mb-8"
+            role="timer"
+            aria-live="polite"
+            aria-label={`${days} days, ${hours} hours, ${minutes} minutes, and ${seconds} seconds until the convention`}
+          >
+            {[{ v: days, l: 'Days' }, { v: hours, l: 'Hours' }, { v: minutes, l: 'Min' }, { v: seconds, l: 'Sec' }].map(({ v, l }) => (
+              <div
+                key={l}
+                className="flex flex-col items-center rounded-lg sm:rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 px-2 py-2.5 sm:px-3 sm:py-3"
+              >
+                <span className="text-2xl sm:text-4xl font-black tabular-nums leading-none">
+                  {String(v).padStart(2, '0')}
+                </span>
+                <span className="text-[9px] sm:text-[10px] text-white/75 uppercase tracking-wider mt-1">{l}</span>
               </div>
             ))}
           </div>
 
-          {/* CTA buttons */}
-          <div className="flex flex-wrap justify-center gap-3 mb-10">
-            <a href="https://buy.stripe.com/fZucN60BC3SKcLR9eYaR20j" target="_blank" rel="noreferrer"
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-7 py-3 rounded-lg text-sm transition">
-              🎟️ Pay for Convention
+          <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 w-full sm:w-auto mb-8">
+            <a
+              href="https://buy.stripe.com/fZucN60BC3SKcLR9eYaR20j"
+              target="_blank"
+              rel="noreferrer"
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3.5 rounded-lg text-sm transition shadow-lg shadow-black/25"
+            >
+              Register Now
             </a>
-            <a href="https://book.passkey.com/go/NUPD2026" target="_blank" rel="noreferrer"
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/25 text-white font-bold px-7 py-3 rounded-lg text-sm transition">
-              🏨 Reserve a Hotel
+            <a
+              href="https://book.passkey.com/go/NUPD2026"
+              target="_blank"
+              rel="noreferrer"
+              className="w-full sm:w-auto border border-white/35 bg-white/10 hover:bg-white/20 text-white font-semibold px-8 py-3.5 rounded-lg text-sm transition"
+            >
+              Reserve Hotel
             </a>
-            <a href="https://buy.stripe.com/9AQ4k10e1cW96Ri14e" target="_blank" rel="noreferrer"
-              className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 border border-white/20 text-white font-bold px-7 py-3 rounded-lg text-sm transition">
-              ⛵ Pay for Boat Cruise
+            <a
+              href="https://buy.stripe.com/9AQ4k10e1cW96Ri14e"
+              target="_blank"
+              rel="noreferrer"
+              className="w-full sm:w-auto border border-white/35 bg-white/10 hover:bg-white/20 text-white font-semibold px-8 py-3.5 rounded-lg text-sm transition"
+            >
+              Boat Cruise Tickets
             </a>
           </div>
 
-          {/* Slide dots */}
-          <div className="flex gap-2">
+          <div className="flex gap-2" role="tablist" aria-label="Hero background images">
             {HERO_IMAGES.map((_, i) => (
-              <button key={i} onClick={() => setHeroIndex(i)}
-                className={`h-1.5 rounded-full transition-all duration-300 ${i === heroIndex ? 'bg-red-500 w-6' : 'bg-white/25 w-3'}`}
+              <button
+                key={i}
+                type="button"
+                role="tab"
+                aria-selected={i === heroIndex}
+                aria-label={`Show image ${i + 1} of ${HERO_IMAGES.length}`}
+                onClick={() => setHeroIndex(i)}
+                className={`h-1.5 rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 ${
+                  i === heroIndex ? 'bg-red-500 w-6' : 'bg-white/30 w-3 hover:bg-white/50'
+                }`}
               />
             ))}
           </div>
