@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getRegistrants, createRegistrant, deleteRegistrant, createPayment, deletePayment, getUnattributedPayments, linkPayment } from '../../services/api'
+import { getRegistrants, createRegistrant, updateRegistrant, deleteRegistrant, createPayment, deletePayment, getUnattributedPayments, linkPayment } from '../../services/api'
 import { Link } from 'react-router-dom'
 
 const COUNTRIES = [
@@ -131,9 +131,11 @@ export default function AdminRegistrants() {
   const [formError, setFormError] = useState('')
   const [newPayment, setNewPayment] = useState(EMPTY_PAYMENT)
   const [paymentTarget, setPaymentTarget] = useState(null) // registrant object, or 'unattributed'
-  const [showUnattributed, setShowUnattributed] = useState(false)
-  const [linkTarget, setLinkTarget] = useState(null) // payment to link
+  const [linkTarget, setLinkTarget] = useState(null)
   const [linkSearch, setLinkSearch] = useState('')
+  const [editTarget, setEditTarget] = useState(null) // registrant being edited
+  const [editForm, setEditForm] = useState({})
+  const [editError, setEditError] = useState('')
 
   const { data: registrants = [], isLoading } = useQuery({
     queryKey: ['registrants', search],
@@ -156,6 +158,41 @@ export default function AdminRegistrants() {
     onSuccess: () => queryClient.invalidateQueries(['registrants']),
   })
 
+  const editMutation = useMutation({
+    mutationFn: ({ id, data }) => updateRegistrant(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['registrants'])
+      setEditTarget(null)
+      setEditForm({})
+      setEditError('')
+    },
+    onError: (err) => setEditError(err.response?.data?.detail || 'Error updating registrant'),
+  })
+
+  const openEdit = (r) => {
+    setEditTarget(r)
+    setEditForm({
+      first_name: r.first_name,
+      last_name: r.last_name,
+      phone: r.phone || '',
+      address: r.address || '',
+      city: r.city || '',
+      state: r.state || '',
+      country: r.country || '',
+      continent: r.continent || '',
+      age_group: r.age_group,
+      convention: r.convention,
+      boat_cruise: r.boat_cruise,
+      notes: r.notes || '',
+    })
+    setEditError('')
+  }
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault()
+    editMutation.mutate({ id: editTarget.id, data: editForm })
+  }
+
   const addPaymentMutation = useMutation({
     mutationFn: createPayment,
     onSuccess: () => {
@@ -169,12 +206,6 @@ export default function AdminRegistrants() {
   const deletePaymentMutation = useMutation({
     mutationFn: deletePayment,
     onSuccess: () => queryClient.invalidateQueries(['registrants']),
-  })
-
-  const { data: unattributedPayments = [], refetch: refetchUnattributed } = useQuery({
-    queryKey: ['unattributed-payments'],
-    queryFn: () => getUnattributedPayments().then(r => r.data),
-    enabled: showUnattributed,
   })
 
   const linkPaymentMutation = useMutation({
@@ -265,9 +296,8 @@ export default function AdminRegistrants() {
 
   const handleAddPayment = (e) => {
     e.preventDefault()
-    const registrantId = paymentTarget === 'unattributed' ? null : paymentTarget.id
     addPaymentMutation.mutate({
-      registrant_id: registrantId,
+      registrant_id: paymentTarget.id,
       ...newPayment,
       installment: newPayment.installment ? parseInt(newPayment.installment) : null,
     })
@@ -284,10 +314,6 @@ export default function AdminRegistrants() {
           <h1 className="text-lg font-bold">Registrants</h1>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => { setPaymentTarget('unattributed'); setNewPayment(EMPTY_PAYMENT) }}
-            className="bg-blue-700 border border-white/30 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-600">
-            + Record Payment
-          </button>
           <button onClick={() => setShowForm(true)} className="bg-white text-blue-800 px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-50">
             + Add Registrant
           </button>
@@ -298,60 +324,6 @@ export default function AdminRegistrants() {
         <input type="text" placeholder="Search by name or email..."
           value={search} onChange={e => setSearch(e.target.value)}
           className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-
-        {/* Unattributed payments panel */}
-        <div className="mb-4">
-          <button onClick={() => { setShowUnattributed(v => !v); refetchUnattributed() }}
-            className="text-sm text-orange-600 hover:text-orange-800 font-medium flex items-center gap-1">
-            {showUnattributed ? '▾' : '▸'} Unattributed Payments
-            {unattributedPayments.length > 0 && (
-              <span className="bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded-full ml-1">
-                {unattributedPayments.length}
-              </span>
-            )}
-          </button>
-          {showUnattributed && (
-            <div className="mt-2 bg-orange-50 border border-orange-100 rounded-xl p-4">
-              {unattributedPayments.length === 0
-                ? <p className="text-sm text-gray-400">No unattributed payments.</p>
-                : (
-                  <table className="w-full text-sm">
-                    <thead className="text-xs text-gray-500 uppercase">
-                      <tr>
-                        <th className="text-left py-1 pr-4">Product</th>
-                        <th className="text-left py-1 pr-4">Amount</th>
-                        <th className="text-left py-1 pr-4">Payer</th>
-                        <th className="text-left py-1 pr-4">Stripe PI</th>
-                        <th className="text-left py-1 pr-4">Notes</th>
-                        <th className="text-left py-1"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-orange-100">
-                      {unattributedPayments.map(p => (
-                        <tr key={p.id}>
-                          <td className="py-2 pr-4 text-gray-700">
-                            {productLabel(p.product_type)}
-                            {p.installment ? ` inst.${p.installment}` : ''}
-                          </td>
-                          <td className="py-2 pr-4 font-medium text-gray-800">${p.amount}</td>
-                          <td className="py-2 pr-4 text-gray-500">{p.payer_name || '—'}</td>
-                          <td className="py-2 pr-4 text-gray-400 text-xs font-mono">{p.stripe_pi_id || '—'}</td>
-                          <td className="py-2 pr-4 text-gray-500">{p.notes || '—'}</td>
-                          <td className="py-2">
-                            <button onClick={() => { setLinkTarget(p); setLinkSearch('') }}
-                              className="text-xs text-blue-600 hover:text-blue-800 font-medium">
-                              Link to registrant →
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )
-              }
-            </div>
-          )}
-        </div>
 
         {isLoading && <p className="text-gray-400 text-center py-10">Loading...</p>}
 
@@ -472,9 +444,12 @@ export default function AdminRegistrants() {
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-xs">{r.entered_by || '—'}</td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => { if (window.confirm('Delete this registrant?')) deleteMutation.mutate(r.id) }}
-                      className="text-red-400 hover:text-red-600 text-xs">Delete</button>
+                    <div className="flex gap-3">
+                      <button onClick={() => openEdit(r)} className="text-blue-500 hover:text-blue-700 text-xs font-medium">Edit</button>
+                      <button
+                        onClick={() => { if (window.confirm('Delete this registrant?')) deleteMutation.mutate(r.id) }}
+                        className="text-red-400 hover:text-red-600 text-xs">Delete</button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -542,6 +517,21 @@ export default function AdminRegistrants() {
                   <option value="youth">Youth</option>
                   <option value="child">Child</option>
                 </select>
+              </div>
+
+              {/* Registration flags */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Registered For</p>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" checked={form.convention} onChange={e => setForm({ ...form, convention: e.target.checked })} className="w-4 h-4 rounded" />
+                    Registration
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" checked={form.boat_cruise} onChange={e => setForm({ ...form, boat_cruise: e.target.checked })} className="w-4 h-4 rounded" />
+                    Boat Cruise
+                  </label>
+                </div>
               </div>
 
               {/* Payments */}
@@ -808,6 +798,98 @@ export default function AdminRegistrants() {
               className="w-full border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Registrant Modal ── */}
+      {editTarget && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4 py-8 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg my-auto">
+            <h2 className="text-lg font-bold text-gray-800 mb-1">Edit Registrant</h2>
+            <p className="text-xs text-gray-400 mb-4">{editTarget.first_name} {editTarget.last_name}</p>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Name</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <input required placeholder="First name" value={editForm.first_name}
+                    onChange={e => setEditForm({ ...editForm, first_name: e.target.value })} className={input} />
+                  <input required placeholder="Last name" value={editForm.last_name}
+                    onChange={e => setEditForm({ ...editForm, last_name: e.target.value })} className={input} />
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Contact</p>
+                <input placeholder="Phone" value={editForm.phone}
+                  onChange={e => setEditForm({ ...editForm, phone: e.target.value })} className={`w-full ${input}`} />
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Location</p>
+                <div className="space-y-2">
+                  <input placeholder="Street address" value={editForm.address}
+                    onChange={e => setEditForm({ ...editForm, address: e.target.value })} className={`w-full ${input}`} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input placeholder="City" value={editForm.city}
+                      onChange={e => setEditForm({ ...editForm, city: e.target.value })} className={input} />
+                    <input placeholder="State / Province" value={editForm.state}
+                      onChange={e => setEditForm({ ...editForm, state: e.target.value })} className={input} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <CountrySelect value={editForm.country} onChange={val => setEditForm({ ...editForm, country: val })} />
+                    <select value={editForm.continent} onChange={e => setEditForm({ ...editForm, continent: e.target.value })} className={input + ' text-gray-500'}>
+                      <option value="">Continent</option>
+                      {CONTINENTS.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Age Group</p>
+                <select value={editForm.age_group} onChange={e => setEditForm({ ...editForm, age_group: e.target.value })} className={`w-full ${input}`}>
+                  <option value="adult">Adult</option>
+                  <option value="youth">Youth</option>
+                  <option value="child">Child</option>
+                </select>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Registered For</p>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" checked={editForm.convention}
+                      onChange={e => setEditForm({ ...editForm, convention: e.target.checked })} className="w-4 h-4 rounded" />
+                    Registration
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" checked={editForm.boat_cruise}
+                      onChange={e => setEditForm({ ...editForm, boat_cruise: e.target.checked })} className="w-4 h-4 rounded" />
+                    Boat Cruise
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Notes</p>
+                <textarea placeholder="Notes" value={editForm.notes}
+                  onChange={e => setEditForm({ ...editForm, notes: e.target.value })}
+                  rows={2} className={`w-full ${input} resize-none`} />
+              </div>
+
+              {editError && <p className="text-red-500 text-sm">{editError}</p>}
+
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => { setEditTarget(null); setEditError('') }}
+                  className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+                <button type="submit" disabled={editMutation.isPending}
+                  className="flex-1 bg-blue-700 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-800 disabled:opacity-50">
+                  {editMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
