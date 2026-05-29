@@ -90,3 +90,43 @@ def checkin_stats(
         "convention_checkins": convention_checkins,
         "boat_cruise_checkins": boat_cruise_checkins,
     }
+
+
+@router.get("/breakdown")
+def checkin_breakdown(
+    db: Session = Depends(get_db),
+    _=Depends(get_current_admin),
+):
+    from sqlalchemy import func
+
+    # Group by lowercased country, then title-case the label
+    country_rows = (
+        db.query(func.initcap(models.Registrant.country), func.count(models.Registrant.id))
+        .filter(models.Registrant.country.isnot(None))
+        .group_by(func.initcap(models.Registrant.country))
+        .order_by(func.count(models.Registrant.id).desc())
+        .all()
+    )
+
+    state_rows = (
+        db.query(models.Registrant.state, func.count(models.Registrant.id))
+        .filter(
+            models.Registrant.state.isnot(None),
+            func.lower(models.Registrant.country).in_(["usa", "united states", "us"])
+        )
+        .group_by(models.Registrant.state)
+        .order_by(func.count(models.Registrant.id).desc())
+        .all()
+    )
+
+    age_rows = (
+        db.query(models.Registrant.age_group, func.count(models.Registrant.id))
+        .group_by(models.Registrant.age_group)
+        .all()
+    )
+
+    return {
+        "by_country": [{"name": r[0], "count": r[1]} for r in country_rows],
+        "by_state": [{"name": r[0], "count": r[1]} for r in state_rows],
+        "by_age_group": [{"name": r[0], "count": r[1]} for r in age_rows],
+    }
