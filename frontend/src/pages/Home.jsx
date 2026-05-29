@@ -339,7 +339,7 @@ export default function Home() {
       {/* ─── CONTACT BAR ─── */}
       <section className="bg-gray-100 border-t border-gray-200 py-6 px-4">
         <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600">
-          <span className="flex items-center gap-2">📞 <a href="tel:6512786724" className="hover:text-[#0a1c46] font-medium">651 278 6724</a></span>
+          <span className="flex items-center gap-2">📞 <a href="tel:8185713246" className="hover:text-[#0a1c46] font-medium">818 571 3246</a></span>
           <span className="flex items-center gap-2">✉️ <a href="mailto:conventions@diasporanup.org" className="hover:text-[#0a1c46] font-medium">conventions@diasporanup.org</a></span>
           <span className="flex items-center gap-2">✉️ <a href="mailto:info@diasporanup.org" className="hover:text-[#0a1c46] font-medium">info@diasporanup.org</a></span>
         </div>
