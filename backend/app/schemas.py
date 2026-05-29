@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, List
 from datetime import datetime, date, time
 
@@ -85,6 +85,7 @@ class RegistrantCreate(BaseModel):
 class RegistrantUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    email: Optional[EmailStr] = None
     phone: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
@@ -119,6 +120,12 @@ class RegistrantOut(BaseModel):
     registered_at: datetime
     notes: Optional[str]
     payments: List[PaymentOut] = []
+
+    @field_validator('checked_in', 'boat_cruise_checked_in', 'convention', 'boat_cruise', mode='before')
+    @classmethod
+    def coerce_none_to_false(cls, v):
+        return v if v is not None else False
+
     class Config:
         from_attributes = True
 

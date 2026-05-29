@@ -71,6 +71,59 @@ def link_payment_to_registrant(
     return payment
 
 
+@router.get("/summary")
+def payment_summary(
+    db: Session = Depends(get_db),
+    _=Depends(get_current_admin),
+):
+    from sqlalchemy import func, Numeric
+
+    # Total collected per product type
+    rows = (
+        db.query(models.Payment.product_type, func.sum(models.Payment.amount.cast(Numeric)))
+        .group_by(models.Payment.product_type)
+        .all()
+    )
+    totals = {r[0]: float(r[1]) for r in rows}
+
+    # Full vs partial per registrant
+    # Convention: full = paid >= 280 (covers early bird $280 and standard $300)
+    # Boat cruise: full = paid >= 220
+    FULL_THRESHOLD = {"convention": 280, "boat_cruise": 220}
+
+    def count_full_partial(product_type):
+        threshold = FULL_THRESHOLD[product_type]
+        paid_per_reg = (
+            db.query(
+                models.Payment.registrant_id,
+                func.sum(models.Payment.amount.cast(Numeric)).label("paid")
+            )
+            .filter(
+                models.Payment.product_type == product_type,
+                models.Payment.registrant_id.isnot(None)
+            )
+            .group_by(models.Payment.registrant_id)
+            .all()
+        )
+        full = sum(1 for r in paid_per_reg if float(r.paid) >= threshold)
+        partial = len(paid_per_reg) - full
+        return full, partial
+
+    conv_full, conv_partial = count_full_partial("convention")
+    cruise_full, cruise_partial = count_full_partial("boat_cruise")
+
+    return {
+        "convention": totals.get("convention", 0),
+        "convention_full": conv_full,
+        "convention_partial": conv_partial,
+        "boat_cruise": totals.get("boat_cruise", 0),
+        "boat_cruise_full": cruise_full,
+        "boat_cruise_partial": cruise_partial,
+        "donation": totals.get("donation", 0),
+        "total": sum(totals.values()),
+    }
+
+
 @router.delete("/{payment_id}", status_code=204)
 def delete_payment(
     payment_id: int,

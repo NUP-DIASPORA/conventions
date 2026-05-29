@@ -97,7 +97,14 @@ def update_registrant(
     ).first()
     if not registrant:
         raise HTTPException(status_code=404, detail="Registrant not found")
-    for field, value in updates.model_dump(exclude_unset=True).items():
+    update_data = updates.model_dump(exclude_unset=True)
+    if 'email' in update_data and update_data['email'] != registrant.email:
+        conflict = db.query(models.Registrant).filter(
+            models.Registrant.email == update_data['email']
+        ).first()
+        if conflict:
+            raise HTTPException(status_code=400, detail="Email already in use by another registrant")
+    for field, value in update_data.items():
         setattr(registrant, field, value)
     db.commit()
     db.refresh(registrant)
