@@ -46,8 +46,10 @@ export const checkIn = (registrantId, eventType, conferenceDay) =>
   api.post('/checkins', { registrant_id: registrantId, event_type: eventType, conference_day: conferenceDay ?? null })
 export const getCheckins = (params) => api.get('/checkins', { params })
 export const getCheckinStats = () => api.get('/checkins/stats')
+export const getCheckinBreakdown = () => api.get('/checkins/breakdown')
 
 // --- Payments ---
+export const getPaymentSummary = () => api.get('/payments/summary')
 export const createPayment = (data) => api.post('/payments', data)
 export const deletePayment = (id) => api.delete(`/payments/${id}`)
 export const getUnattributedPayments = () => api.get('/payments/unattributed')
