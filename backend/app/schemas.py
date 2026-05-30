@@ -122,6 +122,7 @@ class RegistrantOut(BaseModel):
     entered_at: datetime
     registered_at: datetime
     notes: Optional[str]
+    qr_code: Optional[str] = None
     payments: List[PaymentOut] = []
 
     @field_validator('checked_in', 'boat_cruise_checked_in', 'convention', 'boat_cruise', 'is_vip', mode='before')
