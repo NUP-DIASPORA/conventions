@@ -77,16 +77,32 @@ def checkin_stats(
     _=Depends(get_current_admin),
 ):
     total_registrants = db.query(models.Registrant).count()
-    convention_registrants = db.query(models.Registrant).filter(models.Registrant.convention == True).count()
-    boat_cruise_registrants = db.query(models.Registrant).filter(models.Registrant.boat_cruise == True).count()
+    vip_registrants = db.query(models.Registrant).filter(models.Registrant.is_vip == True).count()
+
+    convention_registrants = db.query(models.Registrant).filter(
+        models.Registrant.convention == True, models.Registrant.is_vip == False
+    ).count()
+    vip_convention = db.query(models.Registrant).filter(
+        models.Registrant.convention == True, models.Registrant.is_vip == True
+    ).count()
+
+    boat_cruise_registrants = db.query(models.Registrant).filter(
+        models.Registrant.boat_cruise == True, models.Registrant.is_vip == False
+    ).count()
+    vip_boat_cruise = db.query(models.Registrant).filter(
+        models.Registrant.boat_cruise == True, models.Registrant.is_vip == True
+    ).count()
 
     convention_checkins = db.query(models.CheckIn).filter(models.CheckIn.event_type == "convention").count()
     boat_cruise_checkins = db.query(models.CheckIn).filter(models.CheckIn.event_type == "boat_cruise").count()
 
     return {
         "total_registrants": total_registrants,
+        "vip_registrants": vip_registrants,
         "convention_registrants": convention_registrants,
+        "vip_convention": vip_convention,
         "boat_cruise_registrants": boat_cruise_registrants,
+        "vip_boat_cruise": vip_boat_cruise,
         "convention_checkins": convention_checkins,
         "boat_cruise_checkins": boat_cruise_checkins,
     }
@@ -99,22 +115,29 @@ def checkin_breakdown(
 ):
     from sqlalchemy import func
 
-    # Group by lowercased country, then title-case the label
+    from sqlalchemy import case
+
+    # Normalize USA variants to "United States", then title-case everything else
+    normalized_country = case(
+        (func.lower(models.Registrant.country).in_(["usa", "us", "united states"]), "United States"),
+        else_=func.initcap(models.Registrant.country)
+    )
+
     country_rows = (
-        db.query(func.initcap(models.Registrant.country), func.count(models.Registrant.id))
+        db.query(normalized_country, func.count(models.Registrant.id))
         .filter(models.Registrant.country.isnot(None))
-        .group_by(func.initcap(models.Registrant.country))
+        .group_by(normalized_country)
         .order_by(func.count(models.Registrant.id).desc())
         .all()
     )
 
     state_rows = (
-        db.query(models.Registrant.state, func.count(models.Registrant.id))
+        db.query(func.initcap(models.Registrant.state), func.count(models.Registrant.id))
         .filter(
             models.Registrant.state.isnot(None),
             func.lower(models.Registrant.country).in_(["usa", "united states", "us"])
         )
-        .group_by(models.Registrant.state)
+        .group_by(func.initcap(models.Registrant.state))
         .order_by(func.count(models.Registrant.id).desc())
         .all()
     )

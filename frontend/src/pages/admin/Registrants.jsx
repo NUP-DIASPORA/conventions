@@ -103,6 +103,7 @@ const EMPTY_FORM = {
   first_name: '', last_name: '', email: '', phone: '',
   address: '', city: '', state: '', country: '', continent: '',
   age_group: 'adult',
+  is_vip: false,
   payments: [],
   notes: '',
 }
@@ -348,7 +349,7 @@ export default function AdminRegistrants() {
               {registrants.map(r => (
                 <tr key={r.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    <p className="font-medium text-gray-800">{r.first_name} {r.last_name}</p>
+                    <p className="font-medium text-gray-800">{r.first_name} {r.last_name} {r.is_vip && <span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700 font-semibold">VIP</span>}</p>
                     <p className="text-xs text-gray-400">{new Date(r.registered_at).toLocaleDateString()}</p>
                   </td>
                   <td className="px-4 py-3 text-gray-600">
@@ -523,7 +524,7 @@ export default function AdminRegistrants() {
               {/* Registration flags */}
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Registered For</p>
-                <div className="flex gap-4">
+                <div className="flex gap-4 flex-wrap">
                   <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                     <input type="checkbox" checked={form.convention} onChange={e => setForm({ ...form, convention: e.target.checked })} className="w-4 h-4 rounded" />
                     Registration
@@ -531,6 +532,10 @@ export default function AdminRegistrants() {
                   <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                     <input type="checkbox" checked={form.boat_cruise} onChange={e => setForm({ ...form, boat_cruise: e.target.checked })} className="w-4 h-4 rounded" />
                     Boat Cruise
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-amber-600 cursor-pointer font-medium">
+                    <input type="checkbox" checked={form.is_vip} onChange={e => setForm({ ...form, is_vip: e.target.checked })} className="w-4 h-4 rounded" />
+                    VIP Guest
                   </label>
                 </div>
               </div>
@@ -863,7 +868,7 @@ export default function AdminRegistrants() {
 
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Registered For</p>
-                <div className="flex gap-4">
+                <div className="flex gap-4 flex-wrap">
                   <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                     <input type="checkbox" checked={editForm.convention}
                       onChange={e => setEditForm({ ...editForm, convention: e.target.checked })} className="w-4 h-4 rounded" />
@@ -873,6 +878,11 @@ export default function AdminRegistrants() {
                     <input type="checkbox" checked={editForm.boat_cruise}
                       onChange={e => setEditForm({ ...editForm, boat_cruise: e.target.checked })} className="w-4 h-4 rounded" />
                     Boat Cruise
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-amber-600 cursor-pointer font-medium">
+                    <input type="checkbox" checked={editForm.is_vip || false}
+                      onChange={e => setEditForm({ ...editForm, is_vip: e.target.checked })} className="w-4 h-4 rounded" />
+                    VIP Guest
                   </label>
                 </div>
               </div>
