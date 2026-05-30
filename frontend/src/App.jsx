@@ -5,6 +5,7 @@ import { useAuth } from './services/auth'
 import Home from './pages/Home'
 import Speakers from './pages/Speakers'
 import Schedule from './pages/Schedule'
+import MyQR from './pages/MyQR'
 
 // Admin pages
 import AdminLogin from './pages/admin/Login'
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/" element={<><Navbar /><Home /></>} />
         <Route path="/speakers" element={<><Navbar /><Speakers /></>} />
         <Route path="/schedule" element={<><Navbar /><Schedule /></>} />
+        <Route path="/my-qr" element={<MyQR />} />
 
         {/* Admin routes */}
         <Route path="/admin/login" element={<AdminLogin />} />

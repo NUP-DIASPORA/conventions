@@ -126,6 +126,38 @@ def delete_registrant(
     db.commit()
 
 
+@router.get("/by-email", response_model=schemas.RegistrantOut)
+def get_by_email(
+    email: str,
+    db: Session = Depends(get_db),
+):
+    registrant = db.query(models.Registrant).filter(
+        models.Registrant.email == email
+    ).first()
+    if not registrant:
+        raise HTTPException(status_code=404, detail="No registration found for that email")
+    return registrant
+
+
+@router.get("/lookup/by-qr", response_model=schemas.RegistrantOut)
+def lookup_by_qr(
+    qr_data: str,
+    db: Session = Depends(get_db),
+    _=Depends(get_current_admin),
+):
+    try:
+        parts = qr_data.split(":")
+        registrant_id = int(parts[1])
+    except (IndexError, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid QR code")
+    registrant = db.query(models.Registrant).filter(
+        models.Registrant.id == registrant_id
+    ).first()
+    if not registrant:
+        raise HTTPException(status_code=404, detail="Registrant not found")
+    return registrant
+
+
 @router.get("/{registrant_id}/qr")
 def get_qr_code(
     registrant_id: int,

@@ -41,6 +41,9 @@ export const updateRegistrant = (id, data) => api.patch(`/registrants/${id}`, da
 export const deleteRegistrant = (id) => api.delete(`/registrants/${id}`)
 export const getQRCode = (id) => api.get(`/registrants/${id}/qr`)
 
+// --- QR Lookup ---
+export const lookupByQR = (qr_data) => api.get('/registrants/lookup/by-qr', { params: { qr_data } })
+
 // --- Check-ins ---
 export const checkIn = (registrantId, eventType, conferenceDay) =>
   api.post('/checkins', { registrant_id: registrantId, event_type: eventType, conference_day: conferenceDay ?? null })

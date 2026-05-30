@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
+
 const CONVENTION_DATE = new Date('2026-08-12T00:00:00')
 
 const HERO_IMAGES = ['/hotel1.jpg', '/hotel2.jpg', '/hotel3.jpg', '/boat8.jpg']
@@ -127,6 +128,12 @@ export default function Home() {
             >
               Boat Cruise Tickets
             </a>
+            <Link
+              to="/my-qr"
+              className="w-full sm:w-auto border border-white/35 bg-white/10 hover:bg-white/20 text-white font-semibold px-8 py-3.5 rounded-lg text-sm transition"
+            >
+              📱 My QR Code
+            </Link>
           </div>
 
           <div className="flex gap-2" role="tablist" aria-label="Hero background images">
