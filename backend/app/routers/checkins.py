@@ -148,8 +148,10 @@ def checkin_breakdown(
     }
 
     normalized_state = case(
-        *[(func.lower(func.trim(models.Registrant.state)) == abbr, full)
-          for abbr, full in STATE_MAP.items()],
+        *[
+            (func.lower(func.trim(models.Registrant.state)) == abbr, full)
+            for abbr, full in STATE_MAP.items()
+        ],
         else_=func.initcap(func.trim(models.Registrant.state))
     )
 
