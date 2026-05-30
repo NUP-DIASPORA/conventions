@@ -103,6 +103,7 @@ const EMPTY_FORM = {
   first_name: '', last_name: '', email: '', phone: '',
   address: '', city: '', state: '', country: '', continent: '',
   age_group: 'adult',
+  is_vip: false,
   payments: [],
   notes: '',
 }
@@ -126,6 +127,7 @@ function productLabel(type) {
 export default function AdminRegistrants() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
+  const [filters, setFilters] = useState({ registered: '', payment: '', vip: '', age_group: '', location: '' })
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState('')
@@ -306,49 +308,119 @@ export default function AdminRegistrants() {
 
   const input = 'border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
 
+  const sel = 'border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3572] bg-white text-gray-700 shadow-sm'
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-blue-800 text-white px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="text-blue-200 hover:text-white text-sm">← Home</Link>
-          <Link to="/admin" className="text-blue-200 hover:text-white text-sm">Dashboard</Link>
-          <h1 className="text-lg font-bold">Registrants</h1>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => setShowForm(true)} className="bg-white text-blue-800 px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-50">
+      {/* Header */}
+      <header style={{ background: 'linear-gradient(to right, #111e45, #1a3572)' }} className="text-white px-6 py-5">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Link to="/" className="text-blue-300 hover:text-white text-sm">← Home</Link>
+            <span className="text-blue-600">|</span>
+            <Link to="/admin" className="text-blue-300 hover:text-white text-sm">Dashboard</Link>
+            <span className="text-blue-600">|</span>
+            <h1 className="text-lg font-bold tracking-wide">Registrants</h1>
+          </div>
+          <button onClick={() => setShowForm(true)}
+            style={{ background: '#cc2229' }}
+            className="text-white px-5 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition shadow">
             + Add Registrant
           </button>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <input type="text" placeholder="Search by name or email..."
-          value={search} onChange={e => setSearch(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Search + Filters */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
+          <input type="text" placeholder="🔍  Search by name or email..."
+            value={search} onChange={e => setSearch(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-4 py-2.5 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3572] shadow-sm" />
+          <div className="flex flex-wrap gap-2 items-center">
+            <select value={filters.registered} onChange={e => setFilters(f => ({ ...f, registered: e.target.value }))} className={sel}>
+              <option value="">🎟 All Events</option>
+              <option value="convention">Convention only</option>
+              <option value="boat_cruise">Boat Cruise only</option>
+              <option value="both">Both</option>
+            </select>
+            <select value={filters.payment} onChange={e => setFilters(f => ({ ...f, payment: e.target.value }))} className={sel}>
+              <option value="">💳 All Payments</option>
+              <option value="full">Paid in full</option>
+              <option value="partial">Partial payment</option>
+              <option value="none">No payment</option>
+            </select>
+            <select value={filters.vip} onChange={e => setFilters(f => ({ ...f, vip: e.target.value }))} className={sel}>
+              <option value="">👤 All Guests</option>
+              <option value="vip">VIP only</option>
+              <option value="non_vip">Non-VIP only</option>
+            </select>
+            <select value={filters.age_group} onChange={e => setFilters(f => ({ ...f, age_group: e.target.value }))} className={sel}>
+              <option value="">🎂 All Ages</option>
+              <option value="adult">Adult</option>
+              <option value="youth">Youth</option>
+              <option value="child">Child</option>
+            </select>
+            <input type="text" placeholder="🌍 Country / state..."
+              value={filters.location} onChange={e => setFilters(f => ({ ...f, location: e.target.value }))}
+              className={sel + ' placeholder-gray-400'} />
+            {Object.values(filters).some(v => v) && (
+              <button onClick={() => setFilters({ registered: '', payment: '', vip: '', age_group: '', location: '' })}
+                className="text-xs text-red-500 hover:text-red-700 px-3 py-2 border border-red-200 rounded-lg bg-red-50 font-medium">
+                ✕ Clear filters
+              </button>
+            )}
+          </div>
+        </div>
 
         {isLoading && <p className="text-gray-400 text-center py-10">Loading...</p>}
 
-        <div className="bg-white rounded-xl shadow overflow-x-auto">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
           <table className="w-full text-sm whitespace-nowrap">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+            <thead style={{ background: 'linear-gradient(to right, #111e45, #1a3572)' }} className="text-white text-xs uppercase tracking-wider">
               <tr>
-                <th className="px-4 py-3 text-left">Attendee</th>
-                <th className="px-4 py-3 text-left">Contact</th>
-                <th className="px-4 py-3 text-left">Location</th>
-                <th className="px-4 py-3 text-left">Age</th>
-                <th className="px-4 py-3 text-left">Registered For</th>
-                <th className="px-4 py-3 text-left">Payments</th>
-                <th className="px-4 py-3 text-left">Balance</th>
-                <th className="px-4 py-3 text-left">Check-in</th>
-                <th className="px-4 py-3 text-left">Entered By</th>
-                <th className="px-4 py-3"></th>
+                <th className="px-4 py-3.5 text-left font-semibold">Attendee</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Contact</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Location</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Age</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Registered For</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Payments</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Balance</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Check-in</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Entered By</th>
+                <th className="px-4 py-3.5"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {registrants.map(r => (
-                <tr key={r.id} className="hover:bg-gray-50">
+              {registrants.filter(r => {
+                if (filters.registered === 'convention' && (!r.convention || r.boat_cruise)) return false
+                if (filters.registered === 'boat_cruise' && (!r.boat_cruise || r.convention)) return false
+                if (filters.registered === 'both' && !(r.convention && r.boat_cruise)) return false
+                if (filters.vip === 'vip' && !r.is_vip) return false
+                if (filters.vip === 'non_vip' && r.is_vip) return false
+                if (filters.age_group && r.age_group !== filters.age_group) return false
+                if (filters.location) {
+                  const loc = filters.location.toLowerCase()
+                  if (!(r.country?.toLowerCase().includes(loc) || r.state?.toLowerCase().includes(loc))) return false
+                }
+                if (filters.payment) {
+                  const convPaid = paidTotal(r.payments, 'convention')
+                  const cruisePaid = paidTotal(r.payments, 'boat_cruise')
+                  const totalPaid = convPaid + cruisePaid
+                  // Use same thresholds as backend: convention full >= $280 (covers early bird), boat cruise full >= $220
+                  const FULL_THRESHOLD = { convention: 280, boat_cruise: 220 }
+                  const convFull = r.convention ? (convPaid >= FULL_THRESHOLD.convention) : true
+                  const cruiseFull = r.boat_cruise ? (cruisePaid >= FULL_THRESHOLD.boat_cruise) : true
+                  const isFullyPaid = convFull && cruiseFull
+                  const isPartial = totalPaid > 0 && !isFullyPaid
+                  if (filters.payment === 'none' && totalPaid > 0) return false
+                  if (filters.payment === 'full' && (!r.is_vip && !isFullyPaid)) return false
+                  if (filters.payment === 'partial' && !isPartial) return false
+                }
+                return true
+              }).map((r, idx) => (
+                <tr key={r.id} className={`hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-gray-800">{r.first_name} {r.last_name}</p>
+                    <p className="font-medium text-gray-800">{r.first_name} {r.last_name} {r.is_vip && <span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700 font-semibold">VIP</span>}</p>
                     <p className="text-xs text-gray-400">{new Date(r.registered_at).toLocaleDateString()}</p>
                   </td>
                   <td className="px-4 py-3 text-gray-600">
@@ -445,16 +517,42 @@ export default function AdminRegistrants() {
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-xs">{r.entered_by || '—'}</td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-3">
-                      <button onClick={() => openEdit(r)} className="text-blue-500 hover:text-blue-700 text-xs font-medium">Edit</button>
+                    <div className="flex gap-2">
+                      <button onClick={() => openEdit(r)} className="text-xs font-medium px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition">Edit</button>
                       <button
                         onClick={() => { if (window.confirm('Delete this registrant?')) deleteMutation.mutate(r.id) }}
-                        className="text-red-400 hover:text-red-600 text-xs">Delete</button>
+                        className="text-xs font-medium px-2.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition">Delete</button>
                     </div>
                   </td>
                 </tr>
               ))}
-              {!isLoading && registrants.length === 0 && (
+              {!isLoading && registrants.filter(r => {
+                if (filters.registered === 'convention' && (!r.convention || r.boat_cruise)) return false
+                if (filters.registered === 'boat_cruise' && (!r.boat_cruise || r.convention)) return false
+                if (filters.registered === 'both' && !(r.convention && r.boat_cruise)) return false
+                if (filters.vip === 'vip' && !r.is_vip) return false
+                if (filters.vip === 'non_vip' && r.is_vip) return false
+                if (filters.age_group && r.age_group !== filters.age_group) return false
+                if (filters.location) {
+                  const loc = filters.location.toLowerCase()
+                  if (!(r.country?.toLowerCase().includes(loc) || r.state?.toLowerCase().includes(loc))) return false
+                }
+                if (filters.payment) {
+                  const convPaid = paidTotal(r.payments, 'convention')
+                  const cruisePaid = paidTotal(r.payments, 'boat_cruise')
+                  const totalPaid = convPaid + cruisePaid
+                  // Use same thresholds as backend: convention full >= $280 (covers early bird), boat cruise full >= $220
+                  const FULL_THRESHOLD = { convention: 280, boat_cruise: 220 }
+                  const convFull = r.convention ? (convPaid >= FULL_THRESHOLD.convention) : true
+                  const cruiseFull = r.boat_cruise ? (cruisePaid >= FULL_THRESHOLD.boat_cruise) : true
+                  const isFullyPaid = convFull && cruiseFull
+                  const isPartial = totalPaid > 0 && !isFullyPaid
+                  if (filters.payment === 'none' && totalPaid > 0) return false
+                  if (filters.payment === 'full' && (!r.is_vip && !isFullyPaid)) return false
+                  if (filters.payment === 'partial' && !isPartial) return false
+                }
+                return true
+              }).length === 0 && (
                 <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">No registrants found.</td></tr>
               )}
             </tbody>
@@ -523,7 +621,7 @@ export default function AdminRegistrants() {
               {/* Registration flags */}
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Registered For</p>
-                <div className="flex gap-4">
+                <div className="flex gap-4 flex-wrap">
                   <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                     <input type="checkbox" checked={form.convention} onChange={e => setForm({ ...form, convention: e.target.checked })} className="w-4 h-4 rounded" />
                     Registration
@@ -531,6 +629,10 @@ export default function AdminRegistrants() {
                   <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                     <input type="checkbox" checked={form.boat_cruise} onChange={e => setForm({ ...form, boat_cruise: e.target.checked })} className="w-4 h-4 rounded" />
                     Boat Cruise
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-amber-600 cursor-pointer font-medium">
+                    <input type="checkbox" checked={form.is_vip} onChange={e => setForm({ ...form, is_vip: e.target.checked })} className="w-4 h-4 rounded" />
+                    VIP Guest
                   </label>
                 </div>
               </div>
@@ -863,7 +965,7 @@ export default function AdminRegistrants() {
 
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Registered For</p>
-                <div className="flex gap-4">
+                <div className="flex gap-4 flex-wrap">
                   <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                     <input type="checkbox" checked={editForm.convention}
                       onChange={e => setEditForm({ ...editForm, convention: e.target.checked })} className="w-4 h-4 rounded" />
@@ -873,6 +975,11 @@ export default function AdminRegistrants() {
                     <input type="checkbox" checked={editForm.boat_cruise}
                       onChange={e => setEditForm({ ...editForm, boat_cruise: e.target.checked })} className="w-4 h-4 rounded" />
                     Boat Cruise
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-amber-600 cursor-pointer font-medium">
+                    <input type="checkbox" checked={editForm.is_vip || false}
+                      onChange={e => setEditForm({ ...editForm, is_vip: e.target.checked })} className="w-4 h-4 rounded" />
+                    VIP Guest
                   </label>
                 </div>
               </div>

@@ -79,6 +79,7 @@ class RegistrantCreate(BaseModel):
     age_group: str = "adult"           # child, youth, adult
     convention: bool = False            # registered for convention
     boat_cruise: bool = False           # registered for boat cruise
+    is_vip: bool = False
     payments: List[PaymentInline] = []  # payments to record at registration time
     notes: Optional[str] = None
 
@@ -95,6 +96,7 @@ class RegistrantUpdate(BaseModel):
     age_group: Optional[str] = None
     convention: Optional[bool] = None
     boat_cruise: Optional[bool] = None
+    is_vip: Optional[bool] = None
     checked_in: Optional[bool] = None
     boat_cruise_checked_in: Optional[bool] = None
     notes: Optional[str] = None
@@ -113,6 +115,7 @@ class RegistrantOut(BaseModel):
     age_group: str
     convention: bool
     boat_cruise: bool
+    is_vip: bool
     checked_in: bool
     boat_cruise_checked_in: bool
     entered_by: Optional[str]
@@ -121,7 +124,7 @@ class RegistrantOut(BaseModel):
     notes: Optional[str]
     payments: List[PaymentOut] = []
 
-    @field_validator('checked_in', 'boat_cruise_checked_in', 'convention', 'boat_cruise', mode='before')
+    @field_validator('checked_in', 'boat_cruise_checked_in', 'convention', 'boat_cruise', 'is_vip', mode='before')
     @classmethod
     def coerce_none_to_false(cls, v):
         return v if v is not None else False

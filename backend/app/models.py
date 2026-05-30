@@ -34,6 +34,9 @@ class Registrant(Base):
     convention = Column(Boolean, default=False)       # paid for 4-day convention
     boat_cruise = Column(Boolean, default=False)      # paid for Saturday boat cruise
 
+    # VIP flag
+    is_vip = Column(Boolean, default=False)
+
     # Check-in flags (convenience — source of truth is check_ins table)
     checked_in = Column(Boolean, default=False)
     boat_cruise_checked_in = Column(Boolean, default=False)

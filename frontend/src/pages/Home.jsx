@@ -242,7 +242,7 @@ export default function Home() {
               <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Partial Payment</h3>
               <p className="text-3xl font-black text-gray-900 mb-1">2 × $110</p>
               <p className="text-xs text-gray-400 mb-6 flex-1">Pay in two installments</p>
-              <a href="#" target="_blank" rel="noreferrer"
+              <a href="https://buy.stripe.com/dR6dUBbWJ09n8Zq3cn" target="_blank" rel="noreferrer"
                 className="text-center bg-gray-900 hover:bg-gray-800 text-white font-bold px-5 py-2.5 rounded-lg text-sm transition">
                 Pay in 2 Installments
               </a>
