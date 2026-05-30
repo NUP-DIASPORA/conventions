@@ -119,8 +119,8 @@ def checkin_breakdown(
 
     # Normalize USA variants to "United States", then title-case everything else
     normalized_country = case(
-        (func.lower(models.Registrant.country).in_(["usa", "us", "united states"]), "United States"),
-        else_=func.initcap(models.Registrant.country)
+        (func.lower(func.trim(models.Registrant.country)).in_(["usa", "us", "united states", "u.s.a", "u.s.", "america"]), "United States"),
+        else_=func.initcap(func.trim(models.Registrant.country))
     )
 
     country_rows = (
@@ -131,13 +131,37 @@ def checkin_breakdown(
         .all()
     )
 
+    STATE_MAP = {
+        "al": "Alabama", "ak": "Alaska", "az": "Arizona", "ar": "Arkansas",
+        "ca": "California", "co": "Colorado", "ct": "Connecticut", "de": "Delaware",
+        "fl": "Florida", "ga": "Georgia", "hi": "Hawaii", "id": "Idaho",
+        "il": "Illinois", "in": "Indiana", "ia": "Iowa", "ks": "Kansas",
+        "ky": "Kentucky", "la": "Louisiana", "me": "Maine", "md": "Maryland",
+        "ma": "Massachusetts", "mi": "Michigan", "mn": "Minnesota", "ms": "Mississippi",
+        "mo": "Missouri", "mt": "Montana", "ne": "Nebraska", "nv": "Nevada",
+        "nh": "New Hampshire", "nj": "New Jersey", "nm": "New Mexico", "ny": "New York",
+        "nc": "North Carolina", "nd": "North Dakota", "oh": "Ohio", "ok": "Oklahoma",
+        "or": "Oregon", "pa": "Pennsylvania", "ri": "Rhode Island", "sc": "South Carolina",
+        "sd": "South Dakota", "tn": "Tennessee", "tx": "Texas", "ut": "Utah",
+        "vt": "Vermont", "va": "Virginia", "wa": "Washington", "wv": "West Virginia",
+        "wi": "Wisconsin", "wy": "Wyoming", "dc": "Washington DC",
+    }
+
+    normalized_state = case(
+        *[
+            (func.lower(func.trim(models.Registrant.state)) == abbr, full)
+            for abbr, full in STATE_MAP.items()
+        ],
+        else_=func.initcap(func.trim(models.Registrant.state))
+    )
+
     state_rows = (
-        db.query(func.initcap(models.Registrant.state), func.count(models.Registrant.id))
+        db.query(normalized_state, func.count(models.Registrant.id))
         .filter(
             models.Registrant.state.isnot(None),
-            func.lower(models.Registrant.country).in_(["usa", "united states", "us"])
+            func.lower(func.trim(models.Registrant.country)).in_(["usa", "united states", "us"])
         )
-        .group_by(func.initcap(models.Registrant.state))
+        .group_by(normalized_state)
         .order_by(func.count(models.Registrant.id).desc())
         .all()
     )

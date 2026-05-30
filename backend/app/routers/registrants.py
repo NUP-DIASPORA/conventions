@@ -71,6 +71,58 @@ def create_registrant(
     return registrant
 
 
+# --- Static sub-paths must come BEFORE /{registrant_id} ---
+
+@router.post("/backfill-qr", status_code=200)
+def backfill_qr_codes(
+    db: Session = Depends(get_db),
+    _=Depends(get_current_admin),
+):
+    """Generate QR codes for all registrants that don't have one."""
+    from ..utils.qr import generate_qr_code, get_registrant_qr_data
+    registrants = db.query(models.Registrant).filter(
+        models.Registrant.qr_code == None
+    ).all()
+    for r in registrants:
+        qr_data = get_registrant_qr_data(r.id, r.email)
+        r.qr_code = generate_qr_code(qr_data)
+    db.commit()
+    return {"generated": len(registrants)}
+
+@router.get("/by-email", response_model=schemas.RegistrantOut)
+def get_by_email(
+    email: str,
+    db: Session = Depends(get_db),
+):
+    registrant = db.query(models.Registrant).filter(
+        models.Registrant.email == email
+    ).first()
+    if not registrant:
+        raise HTTPException(status_code=404, detail="No registration found for that email")
+    return registrant
+
+
+@router.get("/lookup/by-qr", response_model=schemas.RegistrantOut)
+def lookup_by_qr(
+    qr_data: str,
+    db: Session = Depends(get_db),
+    _=Depends(get_current_admin),
+):
+    try:
+        parts = qr_data.split(":")
+        registrant_id = int(parts[1])
+    except (IndexError, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid QR code")
+    registrant = db.query(models.Registrant).filter(
+        models.Registrant.id == registrant_id
+    ).first()
+    if not registrant:
+        raise HTTPException(status_code=404, detail="Registrant not found")
+    return registrant
+
+
+# --- Dynamic routes ---
+
 @router.get("/{registrant_id}", response_model=schemas.RegistrantOut)
 def get_registrant(
     registrant_id: int,
