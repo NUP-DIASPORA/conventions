@@ -224,7 +224,7 @@ export default function AdminDashboard() {
         {revenue && stats && (
           <section>
             <SectionHeading>Payment Breakdown</SectionHeading>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <PaymentBreakdownCard
                 label="Registration"
                 icon="🎟️"
@@ -242,6 +242,11 @@ export default function AdminDashboard() {
                 full={revenue.boat_cruise_full}
                 partial={revenue.boat_cruise_partial}
                 collected={revenue.boat_cruise}
+              />
+              <VipCard
+                total={stats.vip_registrants ?? 0}
+                vipConvention={stats.vip_convention ?? 0}
+                vipBoatCruise={stats.vip_boat_cruise ?? 0}
               />
               <RevenueCard label="Total Collected" amount={revenue.total} bold icon="💰" />
             </div>
@@ -421,6 +426,40 @@ function RevenueCard({ label, amount, color, icon, bold, full, partial }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function VipCard({ vipConvention, vipBoatCruise, total }) {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
+      style={{ borderTop: '3px solid #b45309' }}>
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-xl">⭐</span>
+        <p className="text-sm font-semibold text-gray-600">VIP Guests</p>
+        <span className="ml-auto text-2xl font-bold text-amber-700">{total}</span>
+      </div>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
+            <span className="text-gray-600">Convention VIPs</span>
+          </div>
+          <span className="font-bold text-gray-800">{vipConvention}</span>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-300 inline-block" />
+            <span className="text-gray-600">Boat Cruise VIPs</span>
+          </div>
+          <span className="font-bold text-gray-800">{vipBoatCruise}</span>
+        </div>
+        <div className="flex h-2 rounded-full overflow-hidden bg-gray-100 mt-3">
+          <div className="bg-amber-500 transition-all" style={{ width: total ? `${(vipConvention/total)*100}%` : '0%' }} />
+          <div className="bg-amber-300 transition-all" style={{ width: total ? `${(vipBoatCruise/total)*100}%` : '0%' }} />
+        </div>
+        <p className="text-xs text-gray-400">Note: a VIP may have both Convention & Boat Cruise</p>
+      </div>
     </div>
   )
 }
