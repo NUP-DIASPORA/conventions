@@ -158,10 +158,7 @@ export default function AdminDashboard() {
 
   // US data = entries whose country is USA
   const usStates = breakdown?.by_state || []
-  // International = everything that isn't USA/United States/US
-  const international = (breakdown?.by_country || []).filter(
-    d => !['USA', 'United States', 'US'].includes(d.name)
-  )
+  const international = breakdown?.by_country || []
 
   return (
     <div className="min-h-screen bg-gray-50">
