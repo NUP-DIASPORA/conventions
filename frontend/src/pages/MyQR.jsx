@@ -17,7 +17,10 @@ export default function MyQR() {
       const res = await api.get('/registrants/by-email', { params: { email } })
       setResult(res.data)
     } catch (err) {
-      setError(err.response?.data?.detail || 'No registration found for that email.')
+      const detail = err.response?.data?.detail
+      setError(
+        typeof detail === 'string' ? detail : 'No registration found for that email.'
+      )
     } finally {
       setLoading(false)
     }
@@ -78,7 +81,7 @@ export default function MyQR() {
             {result.qr_code ? (
               <>
                 <img
-                  src={`data:image/png;base64,${result.qr_code}`}
+                  src={result.qr_code}
                   alt="Your QR Code"
                   className="mx-auto w-56 h-56 rounded-xl border border-gray-200"
                 />
