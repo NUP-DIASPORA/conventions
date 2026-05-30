@@ -517,11 +517,11 @@ export default function AdminRegistrants() {
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-xs">{r.entered_by || '—'}</td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-3">
-                      <button onClick={() => openEdit(r)} className="text-blue-500 hover:text-blue-700 text-xs font-medium">Edit</button>
+                    <div className="flex gap-2">
+                      <button onClick={() => openEdit(r)} className="text-xs font-medium px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition">Edit</button>
                       <button
                         onClick={() => { if (window.confirm('Delete this registrant?')) deleteMutation.mutate(r.id) }}
-                        className="text-red-400 hover:text-red-600 text-xs">Delete</button>
+                        className="text-xs font-medium px-2.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition">Delete</button>
                     </div>
                   </td>
                 </tr>
