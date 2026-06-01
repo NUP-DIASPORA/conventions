@@ -134,6 +134,20 @@ class RegistrantOut(BaseModel):
         from_attributes = True
 
 
+# --- Audit Log ---
+class AuditLogOut(BaseModel):
+    id: int
+    registrant_id: int
+    field: str
+    old_value: Optional[str]
+    new_value: Optional[str]
+    changed_by: Optional[str]
+    changed_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # --- Check-ins ---
 class CheckInCreate(BaseModel):
     registrant_id: int

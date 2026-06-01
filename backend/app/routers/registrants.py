@@ -142,7 +142,7 @@ def update_registrant(
     registrant_id: int,
     updates: schemas.RegistrantUpdate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_admin),
+    current_admin=Depends(get_current_admin),
 ):
     registrant = db.query(models.Registrant).filter(
         models.Registrant.id == registrant_id
@@ -157,10 +157,33 @@ def update_registrant(
         if conflict:
             raise HTTPException(status_code=400, detail="Email already in use by another registrant")
     for field, value in update_data.items():
+        old_value = getattr(registrant, field, None)
+        if str(old_value) != str(value):
+            db.add(models.AuditLog(
+                registrant_id=registrant_id,
+                field=field,
+                old_value=str(old_value) if old_value is not None else None,
+                new_value=str(value) if value is not None else None,
+                changed_by=current_admin.email,
+            ))
         setattr(registrant, field, value)
     db.commit()
     db.refresh(registrant)
     return registrant
+
+
+@router.get("/{registrant_id}/history", response_model=List[schemas.AuditLogOut])
+def get_registrant_history(
+    registrant_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(get_current_admin),
+):
+    return (
+        db.query(models.AuditLog)
+        .filter(models.AuditLog.registrant_id == registrant_id)
+        .order_by(models.AuditLog.changed_at.desc())
+        .all()
+    )
 
 
 @router.delete("/{registrant_id}", status_code=204)

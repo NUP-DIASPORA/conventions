@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getRegistrants, createRegistrant, updateRegistrant, deleteRegistrant, createPayment, deletePayment, getUnattributedPayments, linkPayment } from '../../services/api'
+import { getRegistrants, createRegistrant, updateRegistrant, deleteRegistrant, createPayment, deletePayment, getUnattributedPayments, linkPayment, getRegistrantHistory } from '../../services/api'
 import { Link } from 'react-router-dom'
 
 const COUNTRIES = [
@@ -138,6 +138,13 @@ export default function AdminRegistrants() {
   const [editTarget, setEditTarget] = useState(null) // registrant being edited
   const [editForm, setEditForm] = useState({})
   const [editError, setEditError] = useState('')
+  const [historyTarget, setHistoryTarget] = useState(null) // registrant whose history we're viewing
+
+  const { data: history = [], isLoading: historyLoading } = useQuery({
+    queryKey: ['registrant-history', historyTarget?.id],
+    queryFn: () => getRegistrantHistory(historyTarget.id).then(r => r.data),
+    enabled: !!historyTarget,
+  })
 
   const { data: registrants = [], isLoading } = useQuery({
     queryKey: ['registrants', search],
@@ -519,6 +526,7 @@ export default function AdminRegistrants() {
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <button onClick={() => openEdit(r)} className="text-xs font-medium px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition">Edit</button>
+                      <button onClick={() => setHistoryTarget(r)} className="text-xs font-medium px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition">History</button>
                       <button
                         onClick={() => { if (window.confirm('Delete this registrant?')) deleteMutation.mutate(r.id) }}
                         className="text-xs font-medium px-2.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition">Delete</button>
@@ -900,6 +908,47 @@ export default function AdminRegistrants() {
               onClick={() => { setLinkTarget(null); setLinkSearch('') }}
               className="w-full border border-gray-300 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">
               Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── History Modal ── */}
+      {historyTarget && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4 py-8 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg my-auto">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">Change History</h2>
+                <p className="text-xs text-gray-400">{historyTarget.first_name} {historyTarget.last_name}</p>
+              </div>
+              <button onClick={() => setHistoryTarget(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+            </div>
+            {historyLoading ? (
+              <p className="text-gray-400 text-sm text-center py-6">Loading...</p>
+            ) : history.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-6">No changes recorded yet.</p>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {history.map(entry => (
+                  <div key={entry.id} className="border border-gray-100 rounded-xl px-4 py-3 bg-gray-50">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">{entry.field.replace(/_/g, ' ')}</span>
+                      <span className="text-xs text-gray-400">{new Date(entry.changed_at).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded line-through">{entry.old_value ?? '—'}</span>
+                      <span className="text-gray-400">→</span>
+                      <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded font-medium">{entry.new_value ?? '—'}</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">by {entry.changed_by}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button onClick={() => setHistoryTarget(null)}
+              className="w-full mt-4 border border-gray-200 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">
+              Close
             </button>
           </div>
         </div>

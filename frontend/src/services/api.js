@@ -40,6 +40,7 @@ export const createRegistrant = (data) => api.post('/registrants', data)
 export const updateRegistrant = (id, data) => api.patch(`/registrants/${id}`, data)
 export const deleteRegistrant = (id) => api.delete(`/registrants/${id}`)
 export const getQRCode = (id) => api.get(`/registrants/${id}/qr`)
+export const getRegistrantHistory = (id) => api.get(`/registrants/${id}/history`)
 
 // --- QR Lookup ---
 export const lookupByQR = (qr_data) => api.get('/registrants/lookup/by-qr', { params: { qr_data } })
