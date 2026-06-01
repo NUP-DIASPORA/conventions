@@ -49,6 +49,7 @@ class Registrant(Base):
 
     payments = relationship("Payment", back_populates="registrant", cascade="all, delete-orphan")
     check_ins = relationship("CheckIn", back_populates="registrant", cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="registrant", cascade="all, delete-orphan")
 
 
 class Payment(Base):
@@ -79,6 +80,20 @@ class CheckIn(Base):
     checked_in_by = Column(String, nullable=True)
 
     registrant = relationship("Registrant", back_populates="check_ins")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    registrant_id = Column(Integer, ForeignKey("registrants.id"), nullable=False)
+    field = Column(String, nullable=False)
+    old_value = Column(String, nullable=True)
+    new_value = Column(String, nullable=True)
+    changed_by = Column(String, nullable=True)
+    changed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    registrant = relationship("Registrant", back_populates="audit_logs")
 
 
 class Speaker(Base):
