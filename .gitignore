@@ -27,3 +27,8 @@ dist/
 
 # Logs
 *.log
+
+# Local dev database
+backend/local_dev.db
+*.db
+backend/local_dev.db
