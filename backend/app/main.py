@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
 from .config import settings
-from .routers import auth, registrants, checkins, speakers, programs, payments
+from .routers import auth, registrants, checkins, speakers, programs, payments, stripe_webhook
 
 # Create all tables
 Base.metadata.create_all(bind=engine)
@@ -30,6 +30,7 @@ app.include_router(checkins.router)
 app.include_router(payments.router)
 app.include_router(speakers.router)
 app.include_router(programs.router)
+app.include_router(stripe_webhook.router)
 
 
 @app.get("/")
