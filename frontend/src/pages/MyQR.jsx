@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../services/api'
+import { getBalanceDue } from '../utils/balance'
 
 export default function MyQR() {
   const [email, setEmail] = useState('')
@@ -78,6 +79,27 @@ export default function MyQR() {
                 {result.is_vip && <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-semibold">VIP</span>}
               </div>
             </div>
+            {/* Balance due */}
+            {(() => {
+              const bal = getBalanceDue(result)
+              if (bal.total <= 0) return null
+              return (
+                <div className="bg-red-50 border border-red-300 rounded-xl px-4 py-3 text-left">
+                  <p className="text-red-700 font-bold text-sm">⚠ Outstanding Balance</p>
+                  {bal.convention > 0 && (
+                    <p className="text-red-600 text-sm mt-0.5">Convention: <span className="font-semibold">${bal.convention.toFixed(2)}</span></p>
+                  )}
+                  {bal.boat_cruise > 0 && (
+                    <p className="text-red-600 text-sm mt-0.5">Boat Cruise: <span className="font-semibold">${bal.boat_cruise.toFixed(2)}</span></p>
+                  )}
+                  {bal.convention > 0 && bal.boat_cruise > 0 && (
+                    <p className="text-red-700 text-sm font-semibold mt-1 border-t border-red-200 pt-1">Total Due: ${bal.total.toFixed(2)}</p>
+                  )}
+                  <p className="text-red-500 text-xs mt-1">Please settle your balance for faster check-in process.</p>
+                </div>
+              )
+            })()}
+
             {result.qr_code ? (
               <>
                 <img
