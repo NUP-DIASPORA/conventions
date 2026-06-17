@@ -85,9 +85,11 @@ function paidTotal(payments, productType) {
 }
 
 // Balance owed for a product (null if not applicable)
+// VIPs are complimentary — no balance ever.
 // Early-bird convention rate: adults who paid $280 are considered paid in full
 const EARLY_BIRD_CONVENTION = 280
 function balanceOwed(registrant, productType) {
+  if (registrant.is_vip) return null
   if (productType === 'convention' && !registrant.convention) return null
   if (productType === 'boat_cruise' && !registrant.boat_cruise) return null
   const expected = expectedTotal(productType, registrant.age_group)
@@ -317,6 +319,76 @@ export default function AdminRegistrants() {
 
   const sel = 'border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3572] bg-white text-gray-700 shadow-sm'
 
+  const filteredRegistrants = registrants.filter(r => {
+    if (filters.registered === 'convention' && (!r.convention || r.boat_cruise)) return false
+    if (filters.registered === 'boat_cruise' && (!r.boat_cruise || r.convention)) return false
+    if (filters.registered === 'both' && !(r.convention && r.boat_cruise)) return false
+    if (filters.vip === 'vip' && !r.is_vip) return false
+    if (filters.vip === 'non_vip' && r.is_vip) return false
+    if (filters.age_group && r.age_group !== filters.age_group) return false
+    if (filters.location) {
+      const loc = filters.location.toLowerCase()
+      if (!(r.country?.toLowerCase().includes(loc) || r.state?.toLowerCase().includes(loc))) return false
+    }
+    if (filters.payment) {
+      const convPaid = paidTotal(r.payments, 'convention')
+      const cruisePaid = paidTotal(r.payments, 'boat_cruise')
+      const totalPaid = convPaid + cruisePaid
+      const FULL_THRESHOLD = { convention: 280, boat_cruise: 220 }
+      const convFull = r.convention ? (convPaid >= FULL_THRESHOLD.convention) : true
+      const cruiseFull = r.boat_cruise ? (cruisePaid >= FULL_THRESHOLD.boat_cruise) : true
+      const isFullyPaid = convFull && cruiseFull
+      const isPartial = totalPaid > 0 && !isFullyPaid
+      if (filters.payment === 'none' && totalPaid > 0) return false
+      if (filters.payment === 'full' && (!r.is_vip && !isFullyPaid)) return false
+      if (filters.payment === 'partial' && !isPartial) return false
+    }
+    return true
+  })
+
+  const downloadCSV = () => {
+    const headers = [
+      'First Name', 'Last Name', 'Email', 'Phone',
+      'Address', 'City', 'State', 'Country', 'Continent',
+      'Age Group', 'VIP', 'Convention', 'Boat Cruise',
+      'Conv Checked In', 'Cruise Checked In',
+      'Conv Paid', 'Cruise Paid', 'Conv Balance', 'Cruise Balance',
+      'Registered At', 'Entered By', 'Notes',
+    ]
+    const escape = (val) => {
+      const s = val == null ? '' : String(val)
+      return s.includes(',') || s.includes('"') || s.includes('\n')
+        ? `"${s.replace(/"/g, '""')}"` : s
+    }
+    const rows = filteredRegistrants.map(r => {
+      const convPaid = paidTotal(r.payments, 'convention')
+      const cruisePaid = paidTotal(r.payments, 'boat_cruise')
+      const convBal = balanceOwed(r, 'convention')
+      const cruiseBal = balanceOwed(r, 'boat_cruise')
+      return [
+        r.first_name, r.last_name, r.email, r.phone || '',
+        r.address || '', r.city || '', r.state || '', r.country || '', r.continent || '',
+        r.age_group, r.is_vip ? 'Yes' : 'No',
+        r.convention ? 'Yes' : 'No', r.boat_cruise ? 'Yes' : 'No',
+        r.checked_in ? 'Yes' : 'No', r.boat_cruise_checked_in ? 'Yes' : 'No',
+        convPaid > 0 ? `$${convPaid.toFixed(2)}` : '',
+        cruisePaid > 0 ? `$${cruisePaid.toFixed(2)}` : '',
+        convBal != null && convBal > 0 ? `$${convBal.toFixed(2)}` : '',
+        cruiseBal != null && cruiseBal > 0 ? `$${cruiseBal.toFixed(2)}` : '',
+        new Date(r.registered_at).toLocaleDateString(),
+        r.entered_by || '', r.notes || '',
+      ].map(escape).join(',')
+    })
+    const csv = [headers.join(','), ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `registrants-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -329,11 +401,18 @@ export default function AdminRegistrants() {
             <span className="text-blue-600">|</span>
             <h1 className="text-lg font-bold tracking-wide">Registrants</h1>
           </div>
-          <button onClick={() => setShowForm(true)}
-            style={{ background: '#cc2229' }}
-            className="text-white px-5 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition shadow">
-            + Add Registrant
-          </button>
+          <div className="flex gap-2">
+            <button onClick={downloadCSV}
+              className="text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition shadow border border-white/30"
+              style={{ background: 'rgba(255,255,255,0.15)' }}>
+              ↓ CSV
+            </button>
+            <button onClick={() => setShowForm(true)}
+              style={{ background: '#cc2229' }}
+              className="text-white px-5 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition shadow">
+              + Add Registrant
+            </button>
+          </div>
         </div>
       </header>
 
@@ -398,33 +477,7 @@ export default function AdminRegistrants() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {registrants.filter(r => {
-                if (filters.registered === 'convention' && (!r.convention || r.boat_cruise)) return false
-                if (filters.registered === 'boat_cruise' && (!r.boat_cruise || r.convention)) return false
-                if (filters.registered === 'both' && !(r.convention && r.boat_cruise)) return false
-                if (filters.vip === 'vip' && !r.is_vip) return false
-                if (filters.vip === 'non_vip' && r.is_vip) return false
-                if (filters.age_group && r.age_group !== filters.age_group) return false
-                if (filters.location) {
-                  const loc = filters.location.toLowerCase()
-                  if (!(r.country?.toLowerCase().includes(loc) || r.state?.toLowerCase().includes(loc))) return false
-                }
-                if (filters.payment) {
-                  const convPaid = paidTotal(r.payments, 'convention')
-                  const cruisePaid = paidTotal(r.payments, 'boat_cruise')
-                  const totalPaid = convPaid + cruisePaid
-                  // Use same thresholds as backend: convention full >= $280 (covers early bird), boat cruise full >= $220
-                  const FULL_THRESHOLD = { convention: 280, boat_cruise: 220 }
-                  const convFull = r.convention ? (convPaid >= FULL_THRESHOLD.convention) : true
-                  const cruiseFull = r.boat_cruise ? (cruisePaid >= FULL_THRESHOLD.boat_cruise) : true
-                  const isFullyPaid = convFull && cruiseFull
-                  const isPartial = totalPaid > 0 && !isFullyPaid
-                  if (filters.payment === 'none' && totalPaid > 0) return false
-                  if (filters.payment === 'full' && (!r.is_vip && !isFullyPaid)) return false
-                  if (filters.payment === 'partial' && !isPartial) return false
-                }
-                return true
-              }).map((r, idx) => (
+              {filteredRegistrants.map((r, idx) => (
                 <tr key={r.id} className={`hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-800">{r.first_name} {r.last_name} {r.is_vip && <span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700 font-semibold">VIP</span>}</p>
@@ -534,33 +587,7 @@ export default function AdminRegistrants() {
                   </td>
                 </tr>
               ))}
-              {!isLoading && registrants.filter(r => {
-                if (filters.registered === 'convention' && (!r.convention || r.boat_cruise)) return false
-                if (filters.registered === 'boat_cruise' && (!r.boat_cruise || r.convention)) return false
-                if (filters.registered === 'both' && !(r.convention && r.boat_cruise)) return false
-                if (filters.vip === 'vip' && !r.is_vip) return false
-                if (filters.vip === 'non_vip' && r.is_vip) return false
-                if (filters.age_group && r.age_group !== filters.age_group) return false
-                if (filters.location) {
-                  const loc = filters.location.toLowerCase()
-                  if (!(r.country?.toLowerCase().includes(loc) || r.state?.toLowerCase().includes(loc))) return false
-                }
-                if (filters.payment) {
-                  const convPaid = paidTotal(r.payments, 'convention')
-                  const cruisePaid = paidTotal(r.payments, 'boat_cruise')
-                  const totalPaid = convPaid + cruisePaid
-                  // Use same thresholds as backend: convention full >= $280 (covers early bird), boat cruise full >= $220
-                  const FULL_THRESHOLD = { convention: 280, boat_cruise: 220 }
-                  const convFull = r.convention ? (convPaid >= FULL_THRESHOLD.convention) : true
-                  const cruiseFull = r.boat_cruise ? (cruisePaid >= FULL_THRESHOLD.boat_cruise) : true
-                  const isFullyPaid = convFull && cruiseFull
-                  const isPartial = totalPaid > 0 && !isFullyPaid
-                  if (filters.payment === 'none' && totalPaid > 0) return false
-                  if (filters.payment === 'full' && (!r.is_vip && !isFullyPaid)) return false
-                  if (filters.payment === 'partial' && !isPartial) return false
-                }
-                return true
-              }).length === 0 && (
+              {!isLoading && filteredRegistrants.length === 0 && (
                 <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">No registrants found.</td></tr>
               )}
             </tbody>
@@ -753,8 +780,8 @@ export default function AdminRegistrants() {
                   </p>
               }
 
-              {/* Balance summary — only for linked registrants */}
-              {!isUnattributed && (paymentTarget.convention || paymentTarget.boat_cruise) && (
+              {/* Balance summary — only for linked non-VIP registrants */}
+              {!isUnattributed && !paymentTarget.is_vip && (paymentTarget.convention || paymentTarget.boat_cruise) && (
                 <div className="mb-4 space-y-1">
                   {paymentTarget.convention && (() => {
                     const exp = expectedTotal('convention', ageGroup)
