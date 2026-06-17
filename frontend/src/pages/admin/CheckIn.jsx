@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { getRegistrants, checkIn, getCheckinStats, lookupByQR } from '../../services/api'
 import { Link } from 'react-router-dom'
 import { Html5Qrcode } from 'html5-qrcode'
+import { getBalanceDue } from '../../utils/balance'
 
 export default function AdminCheckIn() {
   const [eventType, setEventType] = useState('convention')
@@ -254,6 +255,26 @@ export default function AdminCheckIn() {
                     </div>
                   </div>
                 </div>
+
+                {/* Balance due */}
+                {(() => {
+                  const bal = getBalanceDue(scannedRegistrant)
+                  if (bal.total <= 0) return null
+                  return (
+                    <div className="bg-red-50 border border-red-300 rounded-xl px-4 py-3">
+                      <p className="text-red-700 font-bold text-sm">⚠ Outstanding Balance</p>
+                      {bal.convention > 0 && (
+                        <p className="text-red-600 text-sm mt-0.5">Convention: <span className="font-semibold">${bal.convention.toFixed(2)}</span></p>
+                      )}
+                      {bal.boat_cruise > 0 && (
+                        <p className="text-red-600 text-sm mt-0.5">Boat Cruise: <span className="font-semibold">${bal.boat_cruise.toFixed(2)}</span></p>
+                      )}
+                      {bal.convention > 0 && bal.boat_cruise > 0 && (
+                        <p className="text-red-700 text-sm font-semibold mt-1 border-t border-red-200 pt-1">Total Due: ${bal.total.toFixed(2)}</p>
+                      )}
+                    </div>
+                  )
+                })()}
 
                 {/* Check-in status */}
                 {isAlreadyCheckedIn(scannedRegistrant) ? (
