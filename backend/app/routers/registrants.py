@@ -83,6 +83,19 @@ def create_registrant(
 
 # --- Static sub-paths must come BEFORE /{registrant_id} ---
 
+@router.get("/deleted", response_model=List[schemas.RegistrantOut])
+def list_deleted_registrants(
+    db: Session = Depends(get_db),
+    _=Depends(get_current_admin),
+):
+    return (
+        db.query(models.Registrant)
+        .filter(models.Registrant.deleted_at != None)
+        .order_by(models.Registrant.deleted_at.desc())
+        .all()
+    )
+
+
 @router.post("/backfill-qr", status_code=200)
 def backfill_qr_codes(
     db: Session = Depends(get_db),
