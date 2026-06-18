@@ -77,21 +77,23 @@ def checkin_stats(
     db: Session = Depends(get_db),
     _=Depends(get_current_admin),
 ):
-    total_registrants = db.query(models.Registrant).count()
-    vip_registrants = db.query(models.Registrant).filter(models.Registrant.is_vip == True).count()
+    active = models.Registrant.deleted_at == None
+
+    total_registrants = db.query(models.Registrant).filter(active).count()
+    vip_registrants = db.query(models.Registrant).filter(active, models.Registrant.is_vip == True).count()
 
     convention_registrants = db.query(models.Registrant).filter(
-        models.Registrant.convention == True, models.Registrant.is_vip == False
+        active, models.Registrant.convention == True, models.Registrant.is_vip == False
     ).count()
     vip_convention = db.query(models.Registrant).filter(
-        models.Registrant.convention == True, models.Registrant.is_vip == True
+        active, models.Registrant.convention == True, models.Registrant.is_vip == True
     ).count()
 
     boat_cruise_registrants = db.query(models.Registrant).filter(
-        models.Registrant.boat_cruise == True, models.Registrant.is_vip == False
+        active, models.Registrant.boat_cruise == True, models.Registrant.is_vip == False
     ).count()
     vip_boat_cruise = db.query(models.Registrant).filter(
-        models.Registrant.boat_cruise == True, models.Registrant.is_vip == True
+        active, models.Registrant.boat_cruise == True, models.Registrant.is_vip == True
     ).count()
 
     convention_checkins = db.query(models.CheckIn).filter(models.CheckIn.event_type == "convention").count()
@@ -126,7 +128,7 @@ def checkin_breakdown(
 
     country_rows = (
         db.query(normalized_country, func.count(models.Registrant.id))
-        .filter(models.Registrant.country.isnot(None))
+        .filter(models.Registrant.country.isnot(None), models.Registrant.deleted_at == None)
         .group_by(normalized_country)
         .order_by(func.count(models.Registrant.id).desc())
         .all()
@@ -160,6 +162,7 @@ def checkin_breakdown(
         db.query(normalized_state, func.count(models.Registrant.id))
         .filter(
             models.Registrant.state.isnot(None),
+            models.Registrant.deleted_at == None,
             func.lower(func.trim(models.Registrant.country)).in_(["usa", "united states", "us"])
         )
         .group_by(normalized_state)
@@ -169,6 +172,7 @@ def checkin_breakdown(
 
     age_rows = (
         db.query(models.Registrant.age_group, func.count(models.Registrant.id))
+        .filter(models.Registrant.deleted_at == None)
         .group_by(models.Registrant.age_group)
         .all()
     )
