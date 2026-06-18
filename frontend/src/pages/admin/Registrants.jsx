@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getRegistrants, getDeletedRegistrants, createRegistrant, updateRegistrant, deleteRegistrant, createPayment, deletePayment, getUnattributedPayments, linkPayment, getRegistrantHistory } from '../../services/api'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
 const COUNTRIES = [
   'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia',
@@ -126,7 +126,7 @@ function productLabel(type) {
   return type
 }
 
-function DeletedRegistrantsView() {
+export function DeletedRegistrantsView() {
   const [historyTarget, setHistoryTarget] = useState(null)
 
   const { data: deleted = [], isLoading } = useQuery({
@@ -148,8 +148,6 @@ function DeletedRegistrantsView() {
             <Link to="/" className="text-blue-300 hover:text-white text-sm">← Home</Link>
             <span className="text-blue-600">|</span>
             <Link to="/admin" className="text-blue-300 hover:text-white text-sm">Dashboard</Link>
-            <span className="text-blue-600">|</span>
-            <Link to="/admin/registrants" className="text-blue-300 hover:text-white text-sm">Registrants</Link>
             <span className="text-blue-600">|</span>
             <h1 className="text-lg font-bold tracking-wide">Deleted Registrants</h1>
           </div>
@@ -311,9 +309,6 @@ function DeletedRegistrantsView() {
 }
 
 export default function AdminRegistrants() {
-  const [searchParams] = useSearchParams()
-  if (searchParams.get('deleted') === 'true') return <DeletedRegistrantsView />
-
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState({ registered: '', payment: '', vip: '', age_group: '', location: '' })
