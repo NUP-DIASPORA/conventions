@@ -134,13 +134,25 @@ The webhook automatically:
 cd backend
 source venv/bin/activate
 
-DATABASE_URL="sqlite:////tmp/test_nup.db" SECRET_KEY="test" pytest tests/ -v
+# Run all tests
+DATABASE_URL="sqlite:////tmp/test_nup.db" SECRET_KEY="test" python -m pytest tests/ -q
+
+# Run a specific file
+DATABASE_URL="sqlite:////tmp/test_nup.db" SECRET_KEY="test" python -m pytest tests/test_registrants.py -q
+
+# Run a specific class
+DATABASE_URL="sqlite:////tmp/test_nup.db" SECRET_KEY="test" python -m pytest tests/test_registrants.py::TestSoftDelete -q
+
+# Run a single test
+DATABASE_URL="sqlite:////tmp/test_nup.db" SECRET_KEY="test" python -m pytest tests/test_registrants.py::TestSoftDelete::test_email_reusable_after_delete -q
 ```
+
+Use `-q` for compact output, `-v` to see every test name as it runs.
 
 | File | What it covers |
 |---|---|
 | `test_auth.py` | Login, register admin, change password |
-| `test_registrants.py` | CRUD, search, QR lookup, audit log |
+| `test_registrants.py` | CRUD, search, QR lookup, soft-delete, email reuse, audit logging, stats exclusion |
 | `test_payments.py` | Create, link unattributed, summary, delete |
 | `test_checkins.py` | Check-in, duplicate prevention, stats |
 | `test_speakers.py` | CRUD, public vs auth access |
@@ -207,6 +219,8 @@ Environment variables are managed in the Render dashboard (not committed to the 
 | `POST /api/registrants` | — | ✅ |
 | `PATCH /api/registrants/:id` | — | ✅ |
 | `DELETE /api/registrants/:id` | — | ✅ |
+| `GET /api/registrants/deleted` | — | ✅ |
+| `GET /api/registrants/:id/history` | — | ✅ |
 | `GET /api/registrants/by-email` | ✅ | — |
 | `GET /api/registrants/lookup/by-qr` | — | ✅ |
 | `GET /api/payments/summary` | — | ✅ |

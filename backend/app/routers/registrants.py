@@ -228,11 +228,14 @@ def delete_registrant(
     if not registrant:
         raise HTTPException(status_code=404, detail="Registrant not found")
 
+    original_email = registrant.email
     registrant.deleted_at = sqlfunc.now()
+    # Free the email so the address can be re-registered in future
+    registrant.email = f"deleted_{registrant_id}_{original_email}"
     db.add(models.AuditLog(
         registrant_id=registrant_id,
         field="[deleted]",
-        old_value=f"{registrant.first_name} {registrant.last_name} ({registrant.email})",
+        old_value=f"{registrant.first_name} {registrant.last_name} ({original_email})",
         new_value=None,
         changed_by=current_admin.email,
     ))
