@@ -156,9 +156,34 @@ DATABASE_URL="sqlite:////tmp/test_nup.db" SECRET_KEY="test" pytest tests/ -v
 
 | Part | Platform |
 |---|---|
-| Frontend | Render (static site) |
+| Frontend | Hostinger (static file hosting) |
 | Backend | Render (web service) |
 | Database | Supabase (PostgreSQL) |
+
+### Frontend — Hostinger
+
+The frontend is a static Vite build uploaded to Hostinger.
+
+```bash
+cd frontend
+npm run build
+```
+
+This outputs to `frontend/dist/`. Upload the contents of `dist/` to your Hostinger public root (e.g. `public_html/`) via FTP or the Hostinger File Manager.
+
+The repo includes `frontend/htaccess` — rename it to `.htaccess` inside `public_html/` so that client-side routing works (all paths fall back to `index.html`).
+
+All API calls hit `https://conventions.onrender.com/api` (set in `frontend/.env.production` via `VITE_API_URL`).
+
+### Backend — Render
+
+The backend auto-deploys from GitHub. Push to the `stripe-automation` branch and Render picks it up automatically.
+
+```bash
+git push origin stripe-automation
+```
+
+Environment variables are managed in the Render dashboard (not committed to the repo). See the Environment Variables section above for the full list.
 
 ---
 

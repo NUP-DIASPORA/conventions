@@ -46,6 +46,7 @@ class Registrant(Base):
     qr_code = Column(Text, nullable=True)
     registered_at = Column(DateTime(timezone=True), server_default=func.now())
     notes = Column(Text, nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     payments = relationship("Payment", back_populates="registrant", cascade="all, delete-orphan")
     check_ins = relationship("CheckIn", back_populates="registrant", cascade="all, delete-orphan")

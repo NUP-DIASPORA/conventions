@@ -15,7 +15,8 @@ def check_in_registrant(
     current_admin=Depends(get_current_admin),
 ):
     registrant = db.query(models.Registrant).filter(
-        models.Registrant.id == checkin_in.registrant_id
+        models.Registrant.id == checkin_in.registrant_id,
+        models.Registrant.deleted_at == None,
     ).first()
     if not registrant:
         raise HTTPException(status_code=404, detail="Registrant not found")

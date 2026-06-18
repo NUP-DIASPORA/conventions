@@ -19,7 +19,7 @@ def list_registrants(
     db: Session = Depends(get_db),
     _=Depends(get_current_admin),
 ):
-    query = db.query(models.Registrant)
+    query = db.query(models.Registrant).filter(models.Registrant.deleted_at == None)
     if search:
         query = query.filter(
             (models.Registrant.first_name.ilike(f"%{search}%")) |
@@ -40,7 +40,8 @@ def create_registrant(
     current_admin=Depends(get_current_admin),
 ):
     existing = db.query(models.Registrant).filter(
-        models.Registrant.email == registrant_in.email
+        models.Registrant.email == registrant_in.email,
+        models.Registrant.deleted_at == None,
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -65,6 +66,15 @@ def create_registrant(
     # Generate QR code
     qr_data = get_registrant_qr_data(registrant.id, registrant.email)
     registrant.qr_code = generate_qr_code(qr_data)
+
+    # Audit log: registrant created
+    db.add(models.AuditLog(
+        registrant_id=registrant.id,
+        field="[created]",
+        old_value=None,
+        new_value=f"{registrant.first_name} {registrant.last_name} ({registrant.email})",
+        changed_by=current_admin.email,
+    ))
 
     db.commit()
     db.refresh(registrant)
@@ -95,7 +105,8 @@ def get_by_email(
     db: Session = Depends(get_db),
 ):
     registrant = db.query(models.Registrant).filter(
-        models.Registrant.email == email
+        models.Registrant.email == email,
+        models.Registrant.deleted_at == None,
     ).first()
     if not registrant:
         raise HTTPException(status_code=404, detail="No registration found for that email")
@@ -114,7 +125,8 @@ def lookup_by_qr(
     except (IndexError, ValueError):
         raise HTTPException(status_code=400, detail="Invalid QR code")
     registrant = db.query(models.Registrant).filter(
-        models.Registrant.id == registrant_id
+        models.Registrant.id == registrant_id,
+        models.Registrant.deleted_at == None,
     ).first()
     if not registrant:
         raise HTTPException(status_code=404, detail="Registrant not found")
@@ -130,7 +142,8 @@ def get_registrant(
     _=Depends(get_current_admin),
 ):
     registrant = db.query(models.Registrant).filter(
-        models.Registrant.id == registrant_id
+        models.Registrant.id == registrant_id,
+        models.Registrant.deleted_at == None,
     ).first()
     if not registrant:
         raise HTTPException(status_code=404, detail="Registrant not found")
@@ -145,14 +158,16 @@ def update_registrant(
     current_admin=Depends(get_current_admin),
 ):
     registrant = db.query(models.Registrant).filter(
-        models.Registrant.id == registrant_id
+        models.Registrant.id == registrant_id,
+        models.Registrant.deleted_at == None,
     ).first()
     if not registrant:
         raise HTTPException(status_code=404, detail="Registrant not found")
     update_data = updates.model_dump(exclude_unset=True)
     if 'email' in update_data and update_data['email'] != registrant.email:
         conflict = db.query(models.Registrant).filter(
-            models.Registrant.email == update_data['email']
+            models.Registrant.email == update_data['email'],
+            models.Registrant.deleted_at == None,
         ).first()
         if conflict:
             raise HTTPException(status_code=400, detail="Email already in use by another registrant")
@@ -190,14 +205,24 @@ def get_registrant_history(
 def delete_registrant(
     registrant_id: int,
     db: Session = Depends(get_db),
-    _=Depends(get_current_admin),
+    current_admin=Depends(get_current_admin),
 ):
+    from sqlalchemy.sql import func as sqlfunc
     registrant = db.query(models.Registrant).filter(
-        models.Registrant.id == registrant_id
+        models.Registrant.id == registrant_id,
+        models.Registrant.deleted_at == None,
     ).first()
     if not registrant:
         raise HTTPException(status_code=404, detail="Registrant not found")
-    db.delete(registrant)
+
+    registrant.deleted_at = sqlfunc.now()
+    db.add(models.AuditLog(
+        registrant_id=registrant_id,
+        field="[deleted]",
+        old_value=f"{registrant.first_name} {registrant.last_name} ({registrant.email})",
+        new_value=None,
+        changed_by=current_admin.email,
+    ))
     db.commit()
 
 
@@ -208,7 +233,8 @@ def get_qr_code(
     _=Depends(get_current_admin),
 ):
     registrant = db.query(models.Registrant).filter(
-        models.Registrant.id == registrant_id
+        models.Registrant.id == registrant_id,
+        models.Registrant.deleted_at == None,
     ).first()
     if not registrant:
         raise HTTPException(status_code=404, detail="Registrant not found")
