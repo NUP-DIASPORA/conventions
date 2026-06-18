@@ -10,7 +10,7 @@ import MyQR from './pages/MyQR'
 // Admin pages
 import AdminLogin from './pages/admin/Login'
 import AdminDashboard from './pages/admin/Dashboard'
-import AdminRegistrants from './pages/admin/Registrants'
+import AdminRegistrants, { DeletedRegistrantsView } from './pages/admin/Registrants'
 import AdminCheckIn from './pages/admin/CheckIn'
 
 // Layout components
@@ -35,6 +35,7 @@ export default function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/registrants" element={<ProtectedRoute><AdminRegistrants /></ProtectedRoute>} />
+        <Route path="/admin/registrants/deleted" element={<ProtectedRoute><DeletedRegistrantsView /></ProtectedRoute>} />
         <Route path="/admin/checkin" element={<ProtectedRoute><AdminCheckIn /></ProtectedRoute>} />
 
         {/* Fallback */}
