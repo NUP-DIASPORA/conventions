@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getRegistrants, createRegistrant, updateRegistrant, deleteRegistrant, createPayment, deletePayment, getUnattributedPayments, linkPayment, getRegistrantHistory } from '../../services/api'
-import { Link } from 'react-router-dom'
+import { getRegistrants, getDeletedRegistrants, createRegistrant, updateRegistrant, deleteRegistrant, createPayment, deletePayment, getUnattributedPayments, linkPayment, getRegistrantHistory } from '../../services/api'
+import { Link, useSearchParams } from 'react-router-dom'
 
 const COUNTRIES = [
   'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia',
@@ -126,7 +126,194 @@ function productLabel(type) {
   return type
 }
 
+function DeletedRegistrantsView() {
+  const [historyTarget, setHistoryTarget] = useState(null)
+
+  const { data: deleted = [], isLoading } = useQuery({
+    queryKey: ['deleted-registrants'],
+    queryFn: () => getDeletedRegistrants().then(r => r.data),
+  })
+
+  const { data: history = [], isLoading: historyLoading } = useQuery({
+    queryKey: ['registrant-history', historyTarget?.id],
+    queryFn: () => getRegistrantHistory(historyTarget.id).then(r => r.data),
+    enabled: !!historyTarget,
+  })
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header style={{ background: 'linear-gradient(to right, #111e45, #1a3572)' }} className="text-white px-6 py-5">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Link to="/" className="text-blue-300 hover:text-white text-sm">← Home</Link>
+            <span className="text-blue-600">|</span>
+            <Link to="/admin" className="text-blue-300 hover:text-white text-sm">Dashboard</Link>
+            <span className="text-blue-600">|</span>
+            <Link to="/admin/registrants" className="text-blue-300 hover:text-white text-sm">Registrants</Link>
+            <span className="text-blue-600">|</span>
+            <h1 className="text-lg font-bold tracking-wide">Deleted Registrants</h1>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {isLoading && <p className="text-gray-400 text-center py-10">Loading...</p>}
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
+          <table className="w-full text-sm whitespace-nowrap">
+            <thead style={{ background: 'linear-gradient(to right, #111e45, #1a3572)' }} className="text-white text-xs uppercase tracking-wider">
+              <tr>
+                <th className="px-4 py-3.5 text-left font-semibold">Attendee</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Contact</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Location</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Age</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Registered For</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Payments</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Balance</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Check-in</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Entered By</th>
+                <th className="px-4 py-3.5 text-left font-semibold">Deleted At</th>
+                <th className="px-4 py-3.5"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {deleted.map((r, idx) => (
+                <tr key={r.id} className={`hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-gray-800">{r.first_name} {r.last_name} {r.is_vip && <span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700 font-semibold">VIP</span>}</p>
+                    <p className="text-xs text-gray-400">{new Date(r.registered_at).toLocaleDateString()}</p>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    <p>{r.email}</p>
+                    {r.phone && <p className="text-xs text-gray-400">{r.phone}</p>}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500">
+                    <p>{[r.city, r.state].filter(Boolean).join(', ') || '—'}</p>
+                    {r.country && <p className="text-xs text-gray-400">{r.country}</p>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      r.age_group === 'child' ? 'bg-pink-50 text-pink-600' :
+                      r.age_group === 'youth' ? 'bg-purple-50 text-purple-600' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>{r.age_group}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      {r.convention && <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs w-fit">Convention</span>}
+                      {r.boat_cruise && <span className="px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded-full text-xs w-fit">Boat Cruise</span>}
+                      {!r.convention && !r.boat_cruise && <span className="text-gray-300 text-xs">—</span>}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-0.5">
+                      {r.payments?.map(p => (
+                        <span key={p.id} className="text-xs text-gray-600">
+                          {productLabel(p.product_type)}{p.installment ? ` inst.${p.installment}` : ''} — ${p.amount}
+                        </span>
+                      ))}
+                    </div>
+                    {r.payments?.length > 0 && (
+                      <p className="text-xs font-semibold text-gray-700 mt-1">Paid: {paymentSummary(r.payments)}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const convBal = balanceOwed(r, 'convention')
+                      const cruiseBal = balanceOwed(r, 'boat_cruise')
+                      const lines = []
+                      if (convBal !== null) lines.push({ label: 'Conv', amount: convBal })
+                      if (cruiseBal !== null) lines.push({ label: 'Cruise', amount: cruiseBal })
+                      if (lines.length === 0) return <span className="text-gray-300 text-xs">—</span>
+                      return (
+                        <div className="flex flex-col gap-1">
+                          {lines.map(({ label, amount }) => (
+                            <span key={label} className={`px-2 py-0.5 rounded-full text-xs font-medium w-fit ${amount === 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                              {label}: {amount === 0 ? 'Paid ✓' : `$${amount.toFixed(2)} due`}
+                            </span>
+                          ))}
+                        </div>
+                      )
+                    })()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      {r.convention && (
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${r.checked_in ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                          Conv: {r.checked_in ? 'In' : 'Pending'}
+                        </span>
+                      )}
+                      {r.boat_cruise && (
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${r.boat_cruise_checked_in ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                          Cruise: {r.boat_cruise_checked_in ? 'In' : 'Pending'}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-400 text-xs">{r.entered_by || '—'}</td>
+                  <td className="px-4 py-3 text-gray-400 text-xs">
+                    {r.deleted_at ? new Date(r.deleted_at).toLocaleString() : '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => setHistoryTarget(r)} className="text-xs font-medium px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition">History</button>
+                  </td>
+                </tr>
+              ))}
+              {!isLoading && deleted.length === 0 && (
+                <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-400">No deleted registrants.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </main>
+
+      {/* History Modal */}
+      {historyTarget && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4 py-8 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg my-auto">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">Change History</h2>
+                <p className="text-xs text-gray-400">{historyTarget.first_name} {historyTarget.last_name}</p>
+              </div>
+              <button onClick={() => setHistoryTarget(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+            </div>
+            {historyLoading ? (
+              <p className="text-gray-400 text-sm text-center py-6">Loading...</p>
+            ) : history.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-6">No changes recorded yet.</p>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {history.map(entry => (
+                  <div key={entry.id} className="border border-gray-100 rounded-xl px-4 py-3 bg-gray-50">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">{entry.field.replace(/_/g, ' ')}</span>
+                      <span className="text-xs text-gray-400">{new Date(entry.changed_at).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded line-through">{entry.old_value ?? '—'}</span>
+                      <span className="text-gray-400">→</span>
+                      <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded font-medium">{entry.new_value ?? '—'}</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">by {entry.changed_by}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button onClick={() => setHistoryTarget(null)} className="w-full mt-4 border border-gray-200 text-gray-600 py-2 rounded-lg text-sm hover:bg-gray-50">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AdminRegistrants() {
+  const [searchParams] = useSearchParams()
+  if (searchParams.get('deleted') === 'true') return <DeletedRegistrantsView />
+
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState({ registered: '', payment: '', vip: '', age_group: '', location: '' })

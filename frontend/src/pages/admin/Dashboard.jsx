@@ -309,6 +309,12 @@ export default function AdminDashboard() {
               <h3 className="font-semibold text-gray-800 text-base">Check-In</h3>
               <p className="text-sm text-gray-500 mt-1">Scan QR codes and check attendees in</p>
             </Link>
+            <Link to="/admin/registrants?deleted=true"
+              className="group bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all" style={{ borderTop: '3px solid #6b7280' }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4 transition-colors" style={{ background: '#f3f4f6' }}>🗑️</div>
+              <h3 className="font-semibold text-gray-800 text-base">Deleted Registrants</h3>
+              <p className="text-sm text-gray-500 mt-1">View registrants that have been removed</p>
+            </Link>
           </div>
         </section>
       </main>

@@ -36,6 +36,7 @@ export const login = (email, password) => {
 
 // --- Registrants ---
 export const getRegistrants = (params) => api.get('/registrants', { params })
+export const getDeletedRegistrants = () => api.get('/registrants/deleted')
 export const createRegistrant = (data) => api.post('/registrants', data)
 export const updateRegistrant = (id, data) => api.patch(`/registrants/${id}`, data)
 export const deleteRegistrant = (id) => api.delete(`/registrants/${id}`)

@@ -12,12 +12,13 @@ router = APIRouter(prefix="/api/payments", tags=["payments"])
 def create_payment(
     payment_in: schemas.PaymentCreate,
     db: Session = Depends(get_db),
-    _=Depends(get_current_admin),
+    current_admin=Depends(get_current_admin),
 ):
     # If linked to a registrant, validate they exist and update flags
     if payment_in.registrant_id is not None:
         registrant = db.query(models.Registrant).filter(
-            models.Registrant.id == payment_in.registrant_id
+            models.Registrant.id == payment_in.registrant_id,
+            models.Registrant.deleted_at == None,
         ).first()
         if not registrant:
             raise HTTPException(status_code=404, detail="Registrant not found")
@@ -28,6 +29,18 @@ def create_payment(
 
     payment = models.Payment(**payment_in.model_dump())
     db.add(payment)
+    db.flush()  # get payment.id before commit
+
+    # Audit log: payment added (only if linked to a registrant)
+    if payment.registrant_id is not None:
+        db.add(models.AuditLog(
+            registrant_id=payment.registrant_id,
+            field="payment_added",
+            old_value=None,
+            new_value=f"{payment.product_type} ${payment.amount}",
+            changed_by=current_admin.email,
+        ))
+
     db.commit()
     db.refresh(payment)
     return payment
@@ -47,7 +60,7 @@ def link_payment_to_registrant(
     payment_id: int,
     registrant_id: int,
     db: Session = Depends(get_db),
-    _=Depends(get_current_admin),
+    current_admin=Depends(get_current_admin),
 ):
     """Link an unattributed payment to a registrant."""
     payment = db.query(models.Payment).filter(models.Payment.id == payment_id).first()
@@ -56,7 +69,10 @@ def link_payment_to_registrant(
     if payment.registrant_id is not None:
         raise HTTPException(status_code=400, detail="Payment is already linked to a registrant")
 
-    registrant = db.query(models.Registrant).filter(models.Registrant.id == registrant_id).first()
+    registrant = db.query(models.Registrant).filter(
+        models.Registrant.id == registrant_id,
+        models.Registrant.deleted_at == None,
+    ).first()
     if not registrant:
         raise HTTPException(status_code=404, detail="Registrant not found")
 
@@ -65,6 +81,15 @@ def link_payment_to_registrant(
         registrant.convention = True
     elif payment.product_type == "boat_cruise":
         registrant.boat_cruise = True
+
+    # Audit log: payment linked
+    db.add(models.AuditLog(
+        registrant_id=registrant_id,
+        field="payment_linked",
+        old_value="unattributed",
+        new_value=f"{payment.product_type} ${payment.amount}",
+        changed_by=current_admin.email,
+    ))
 
     db.commit()
     db.refresh(payment)
@@ -128,10 +153,21 @@ def payment_summary(
 def delete_payment(
     payment_id: int,
     db: Session = Depends(get_db),
-    _=Depends(get_current_admin),
+    current_admin=Depends(get_current_admin),
 ):
     payment = db.query(models.Payment).filter(models.Payment.id == payment_id).first()
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
+
+    # Audit log: payment removed (only if linked to a registrant)
+    if payment.registrant_id is not None:
+        db.add(models.AuditLog(
+            registrant_id=payment.registrant_id,
+            field="payment_removed",
+            old_value=f"{payment.product_type} ${payment.amount}",
+            new_value=None,
+            changed_by=current_admin.email,
+        ))
+
     db.delete(payment)
     db.commit()

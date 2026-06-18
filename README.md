@@ -134,13 +134,25 @@ The webhook automatically:
 cd backend
 source venv/bin/activate
 
-DATABASE_URL="sqlite:////tmp/test_nup.db" SECRET_KEY="test" pytest tests/ -v
+# Run all tests
+DATABASE_URL="sqlite:////tmp/test_nup.db" SECRET_KEY="test" python -m pytest tests/ -q
+
+# Run a specific file
+DATABASE_URL="sqlite:////tmp/test_nup.db" SECRET_KEY="test" python -m pytest tests/test_registrants.py -q
+
+# Run a specific class
+DATABASE_URL="sqlite:////tmp/test_nup.db" SECRET_KEY="test" python -m pytest tests/test_registrants.py::TestSoftDelete -q
+
+# Run a single test
+DATABASE_URL="sqlite:////tmp/test_nup.db" SECRET_KEY="test" python -m pytest tests/test_registrants.py::TestSoftDelete::test_email_reusable_after_delete -q
 ```
+
+Use `-q` for compact output, `-v` to see every test name as it runs.
 
 | File | What it covers |
 |---|---|
 | `test_auth.py` | Login, register admin, change password |
-| `test_registrants.py` | CRUD, search, QR lookup, audit log |
+| `test_registrants.py` | CRUD, search, QR lookup, soft-delete, email reuse, audit logging, stats exclusion |
 | `test_payments.py` | Create, link unattributed, summary, delete |
 | `test_checkins.py` | Check-in, duplicate prevention, stats |
 | `test_speakers.py` | CRUD, public vs auth access |
@@ -156,9 +168,34 @@ DATABASE_URL="sqlite:////tmp/test_nup.db" SECRET_KEY="test" pytest tests/ -v
 
 | Part | Platform |
 |---|---|
-| Frontend | Render (static site) |
+| Frontend | Hostinger (static file hosting) |
 | Backend | Render (web service) |
 | Database | Supabase (PostgreSQL) |
+
+### Frontend — Hostinger
+
+The frontend is a static Vite build uploaded to Hostinger.
+
+```bash
+cd frontend
+npm run build
+```
+
+This outputs to `frontend/dist/`. Upload the contents of `dist/` to your Hostinger public root (e.g. `public_html/`) via FTP or the Hostinger File Manager.
+
+The repo includes `frontend/htaccess` — rename it to `.htaccess` inside `public_html/` so that client-side routing works (all paths fall back to `index.html`).
+
+All API calls hit `https://conventions.onrender.com/api` (set in `frontend/.env.production` via `VITE_API_URL`).
+
+### Backend — Render
+
+The backend auto-deploys from GitHub. Push to the `stripe-automation` branch and Render picks it up automatically.
+
+```bash
+git push origin stripe-automation
+```
+
+Environment variables are managed in the Render dashboard (not committed to the repo). See the Environment Variables section above for the full list.
 
 ---
 
@@ -182,6 +219,8 @@ DATABASE_URL="sqlite:////tmp/test_nup.db" SECRET_KEY="test" pytest tests/ -v
 | `POST /api/registrants` | — | ✅ |
 | `PATCH /api/registrants/:id` | — | ✅ |
 | `DELETE /api/registrants/:id` | — | ✅ |
+| `GET /api/registrants/deleted` | — | ✅ |
+| `GET /api/registrants/:id/history` | — | ✅ |
 | `GET /api/registrants/by-email` | ✅ | — |
 | `GET /api/registrants/lookup/by-qr` | — | ✅ |
 | `GET /api/payments/summary` | — | ✅ |
