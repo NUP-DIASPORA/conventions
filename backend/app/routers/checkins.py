@@ -39,8 +39,22 @@ def check_in_registrant(
             raise HTTPException(status_code=400, detail="Already checked in for boat cruise")
         registrant.boat_cruise_checked_in = True
 
+    elif checkin_in.event_type == "vendor":
+        if not registrant.vendor:
+            raise HTTPException(status_code=400, detail="Not registered as a vendor")
+        existing = db.query(models.CheckIn).filter(
+            models.CheckIn.registrant_id == checkin_in.registrant_id,
+            models.CheckIn.event_type == "vendor",
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Already checked in for vendor")
+        registrant.vendor_checked_in = True
+
     else:
-        raise HTTPException(status_code=400, detail="event_type must be 'convention' or 'boat_cruise'")
+        raise HTTPException(
+            status_code=400,
+            detail="event_type must be 'convention', 'boat_cruise', or 'vendor'",
+        )
 
     checkin = models.CheckIn(
         registrant_id=checkin_in.registrant_id,
@@ -96,8 +110,13 @@ def checkin_stats(
         active, models.Registrant.boat_cruise == True, models.Registrant.is_vip == True
     ).count()
 
+    vendor_registrants = db.query(models.Registrant).filter(
+        active, models.Registrant.vendor == True
+    ).count()
+
     convention_checkins = db.query(models.CheckIn).filter(models.CheckIn.event_type == "convention").count()
     boat_cruise_checkins = db.query(models.CheckIn).filter(models.CheckIn.event_type == "boat_cruise").count()
+    vendor_checkins = db.query(models.CheckIn).filter(models.CheckIn.event_type == "vendor").count()
 
     return {
         "total_registrants": total_registrants,
@@ -106,8 +125,10 @@ def checkin_stats(
         "vip_convention": vip_convention,
         "boat_cruise_registrants": boat_cruise_registrants,
         "vip_boat_cruise": vip_boat_cruise,
+        "vendor_registrants": vendor_registrants,
         "convention_checkins": convention_checkins,
         "boat_cruise_checkins": boat_cruise_checkins,
+        "vendor_checkins": vendor_checkins,
     }
 
 

@@ -9,13 +9,15 @@ Supported payment links:
   - Convention half payment ($150)
   - Boat Cruise full payment ($220)
   - Boat Cruise partial payment ($110)
+  - Vendor table ($500 each; multiples of $500 supported)
 
 Setup:
   1. Add STRIPE_WEBHOOK_SECRET to your .env
-  2. Add the 4 STRIPE_LINK_* IDs to your .env (see .env.example)
-  3. In Stripe Dashboard → Developers → Webhooks, add your endpoint:
-       https://<your-api-domain>/api/webhooks/stripe
-     and subscribe to: checkout.session.completed
+  2. Add STRIPE_LINK_* values as plink_… IDs from Stripe Dashboard (not buy.stripe.com slugs)
+  3. In Stripe Dashboard → Developers → Webhooks, point the endpoint at the API host:
+       https://conventions.onrender.com/api/webhooks/stripe
+     (NOT the frontend Hostinger domain — that returns HTML 200 and never hits this handler)
+     Subscribe to: checkout.session.completed
 """
 
 import hashlib
@@ -36,6 +38,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
 
 STRIPE_SIGNATURE_TOLERANCE = 300  # seconds (5 minutes — Stripe's default)
+
+VENDOR_TABLE_CENTS = 50000
 
 
 def _verify_stripe_signature(payload: bytes, sig_header: str | None, secret: str) -> bool:
@@ -62,7 +66,7 @@ def _verify_stripe_signature(payload: bytes, sig_header: str | None, secret: str
 
 
 def _get_payment_link_id(session: dict) -> str | None:
-    """Extract the payment link slug from a Stripe checkout session."""
+    """Extract the payment link ID (plink_…) from a Stripe checkout session."""
     pl = session.get("payment_link")
     if not pl:
         return None
@@ -70,19 +74,28 @@ def _get_payment_link_id(session: dict) -> str | None:
     return pl if isinstance(pl, str) else pl.get("id")
 
 
-def _classify_session(payment_link_id: str | None, amount_total: int) -> tuple[str, int | None] | None:
+def _classify_session(
+    payment_link_id: str | None, amount_total: int
+) -> tuple[str, int | None, str | None] | None:
     """
-    Return (product_type, installment) based on payment link ID.
-    Falls back to amount if link IDs aren't configured.
+    Return (product_type, installment, age_group) based on payment link ID.
+    age_group is set for child convention payments; otherwise None (leave default).
+    Falls back to amount if link IDs aren't configured or don't match.
     Returns None if the session can't be classified.
 
     installment: None = full payment, 1 = first/only partial payment
     """
+    # Keys must be plink_… IDs from Stripe (checkout sessions do not send buy.stripe.com slugs)
+    # Values: (product_type, installment, age_group_or_None)
     link_map = {
-        settings.STRIPE_LINK_CONVENTION_FULL:    ("convention", None),
-        settings.STRIPE_LINK_CONVENTION_HALF:    ("convention", 1),
-        settings.STRIPE_LINK_BOAT_CRUISE_FULL:   ("boat_cruise", None),
-        settings.STRIPE_LINK_BOAT_CRUISE_PARTIAL: ("boat_cruise", 1),
+        k: v for k, v in {
+            settings.STRIPE_LINK_CONVENTION_FULL:     ("convention", None, None),
+            settings.STRIPE_LINK_CONVENTION_HALF:     ("convention", 1, None),
+            settings.STRIPE_LINK_CONVENTION_CHILDREN: ("convention", None, "child"),
+            settings.STRIPE_LINK_BOAT_CRUISE_FULL:    ("boat_cruise", None, None),
+            settings.STRIPE_LINK_BOAT_CRUISE_PARTIAL: ("boat_cruise", 1, None),
+            settings.STRIPE_LINK_VENDOR:              ("vendor", None, None),
+        }.items() if k
     }
 
     if payment_link_id:
@@ -91,13 +104,24 @@ def _classify_session(payment_link_id: str | None, amount_total: int) -> tuple[s
             return result
 
     # Fallback: classify by amount (in cents)
+    # Note: child/youth full registration is also $150 — same as adult half payment.
+    # Those must be distinguished via STRIPE_LINK_CONVENTION_CHILDREN (plink), not amount.
     amount_map = {
-        30000: ("convention", None),
-        15000: ("convention", 1),
-        22000: ("boat_cruise", None),
-        11000: ("boat_cruise", 1),
+        30000: ("convention", None, None),
+        15000: ("convention", 1, None),
+        22000: ("boat_cruise", None, None),
+        11000: ("boat_cruise", 1, None),
+        VENDOR_TABLE_CENTS: ("vendor", None, None),
     }
-    return amount_map.get(amount_total)
+    result = amount_map.get(amount_total)
+    if result:
+        return result
+
+    # Vendor tables: any positive multiple of $500 (e.g. 2 tables = $1000)
+    if amount_total >= VENDOR_TABLE_CENTS and amount_total % VENDOR_TABLE_CENTS == 0:
+        return ("vendor", None, None)
+
+    return None
 
 
 def _parse_custom_fields(custom_fields: list) -> dict:
@@ -114,7 +138,7 @@ def _parse_custom_fields(custom_fields: list) -> dict:
             result["city"] = text_val
         elif "state" in key:
             result["state"] = text_val
-        elif "name" in key or "registrant" in key:
+        elif "name" in key or "registrant" in key or "vendor" in key or "business" in key:
             result["registrant_name"] = text_val
     return result
 
@@ -170,6 +194,29 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     return {"received": True}
 
 
+def _record_unattributed(session: dict, db: Session, amount_dollars: str, stripe_pi_id: str | None, paid_at):
+    """Keep unclassified payments so they aren't silently lost."""
+    payment = models.Payment(
+        registrant_id=None,
+        product_type="unclassified",
+        installment=None,
+        amount=amount_dollars,
+        stripe_pi_id=stripe_pi_id,
+        paid_at=paid_at,
+        notes=(
+            f"Unclassified Stripe payment (session {session.get('id')}, "
+            f"link={_get_payment_link_id(session)}, amount_cents={session.get('amount_total')}). "
+            "Link manually in admin."
+        ),
+    )
+    db.add(payment)
+    db.commit()
+    logger.warning(
+        "Recorded unclassified payment session=%s amount=%s — link in admin",
+        session.get("id"), amount_dollars,
+    )
+
+
 def _process_session(session: dict, db: Session):
     """Core logic: upsert registrant + create payment record."""
 
@@ -178,15 +225,28 @@ def _process_session(session: dict, db: Session):
     amount_total = session.get("amount_total", 0)  # in cents
     classification = _classify_session(payment_link_id, amount_total)
 
+    amount_dollars = f"{amount_total / 100:.2f}"
+    stripe_pi_id = session.get("payment_intent")
+    paid_at = datetime.fromtimestamp(session.get("created", 0), tz=timezone.utc)
+
+    # --- Deduplicate early (covers unclassified path too) ---
+    if stripe_pi_id:
+        existing_payment = db.query(models.Payment).filter(
+            models.Payment.stripe_pi_id == stripe_pi_id
+        ).first()
+        if existing_payment:
+            logger.info("Payment %s already recorded. Skipping.", stripe_pi_id)
+            return
+
     if not classification:
         logger.warning(
-            "Could not classify session %s (link=%s, amount=%s). Skipping.",
+            "Could not classify session %s (link=%s, amount=%s). Recording as unattributed.",
             session.get("id"), payment_link_id, amount_total
         )
+        _record_unattributed(session, db, amount_dollars, stripe_pi_id, paid_at)
         return
 
-    product_type, installment = classification
-    amount_dollars = f"{amount_total / 100:.2f}"
+    product_type, installment, age_group = classification
 
     # --- Extract customer info ---
     customer_details = session.get("customer_details") or {}
@@ -202,25 +262,17 @@ def _process_session(session: dict, db: Session):
     city = parsed.get("city")
     state = parsed.get("state")
 
-    stripe_pi_id = session.get("payment_intent")
-    paid_at = datetime.fromtimestamp(session.get("created", 0), tz=timezone.utc)
-
     if not email:
-        logger.warning("No email in session %s — cannot create registrant", session.get("id"))
+        logger.warning(
+            "No email in session %s — recording unattributed payment", session.get("id")
+        )
+        _record_unattributed(session, db, amount_dollars, stripe_pi_id, paid_at)
         return
-
-    # --- Deduplicate: skip if this payment_intent is already recorded ---
-    if stripe_pi_id:
-        existing_payment = db.query(models.Payment).filter(
-            models.Payment.stripe_pi_id == stripe_pi_id
-        ).first()
-        if existing_payment:
-            logger.info("Payment %s already recorded. Skipping.", stripe_pi_id)
-            return
 
     # --- Find or create registrant ---
     registrant = db.query(models.Registrant).filter(
-        models.Registrant.email == email
+        models.Registrant.email == email,
+        models.Registrant.deleted_at == None,
     ).first()
 
     if registrant:
@@ -241,6 +293,7 @@ def _process_session(session: dict, db: Session):
             email=email,
             city=city,
             state=state,
+            age_group=age_group or "adult",
             entered_by="stripe-webhook",
         )
         db.add(registrant)
@@ -255,6 +308,11 @@ def _process_session(session: dict, db: Session):
         registrant.convention = True
     elif product_type == "boat_cruise":
         registrant.boat_cruise = True
+    elif product_type == "vendor":
+        registrant.vendor = True
+
+    if age_group:
+        registrant.age_group = age_group
 
     # --- Record the payment ---
     payment = models.Payment(

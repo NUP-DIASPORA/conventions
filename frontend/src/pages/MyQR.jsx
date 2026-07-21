@@ -76,6 +76,7 @@ export default function MyQR() {
               <div className="flex justify-center gap-2 mt-2">
                 {result.convention && <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full">Convention</span>}
                 {result.boat_cruise && <span className="text-xs px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded-full">Boat Cruise</span>}
+                {result.vendor && <span className="text-xs px-2 py-0.5 bg-violet-50 text-violet-700 rounded-full">Vendor</span>}
                 {result.is_vip && <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-semibold">VIP</span>}
               </div>
             </div>
@@ -92,7 +93,10 @@ export default function MyQR() {
                   {bal.boat_cruise > 0 && (
                     <p className="text-red-600 text-sm mt-0.5">Boat Cruise: <span className="font-semibold">${bal.boat_cruise.toFixed(2)}</span></p>
                   )}
-                  {bal.convention > 0 && bal.boat_cruise > 0 && (
+                  {bal.vendor > 0 && (
+                    <p className="text-red-600 text-sm mt-0.5">Vendor Table: <span className="font-semibold">${bal.vendor.toFixed(2)}</span></p>
+                  )}
+                  {bal.total > 0 && (bal.convention > 0 || bal.boat_cruise > 0 || bal.vendor > 0) && (
                     <p className="text-red-700 text-sm font-semibold mt-1 border-t border-red-200 pt-1">Total Due: ${bal.total.toFixed(2)}</p>
                   )}
                   <p className="text-red-500 text-xs mt-1">Please settle your balance for faster check-in process.</p>

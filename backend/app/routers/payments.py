@@ -26,6 +26,8 @@ def create_payment(
             registrant.convention = True
         elif payment_in.product_type == "boat_cruise":
             registrant.boat_cruise = True
+        elif payment_in.product_type == "vendor":
+            registrant.vendor = True
 
     payment = models.Payment(**payment_in.model_dump())
     db.add(payment)
@@ -81,6 +83,8 @@ def link_payment_to_registrant(
         registrant.convention = True
     elif payment.product_type == "boat_cruise":
         registrant.boat_cruise = True
+    elif payment.product_type == "vendor":
+        registrant.vendor = True
 
     # Audit log: payment linked
     db.add(models.AuditLog(
@@ -112,9 +116,10 @@ def payment_summary(
     totals = {r[0]: float(r[1]) for r in rows}
 
     # Full vs partial per registrant
-    # Convention: full = paid >= 280 (covers early bird $280 and standard $300)
+    # Convention: full = paid >= 280 (adult early bird) or >= 150 (child/youth)
     # Boat cruise: full = paid >= 220
-    FULL_THRESHOLD = {"convention": 280, "boat_cruise": 220}
+    # Vendor: full = paid >= 500
+    FULL_THRESHOLD = {"convention": 280, "boat_cruise": 220, "vendor": 500}
 
     def count_full_partial(product_type):
         threshold = FULL_THRESHOLD[product_type]
@@ -130,12 +135,31 @@ def payment_summary(
             .group_by(models.Payment.registrant_id)
             .all()
         )
-        full = sum(1 for r in paid_per_reg if float(r.paid) >= threshold)
+        if product_type != "convention":
+            full = sum(1 for r in paid_per_reg if float(r.paid) >= threshold)
+            partial = len(paid_per_reg) - full
+            return full, partial
+
+        # Convention: child/youth threshold is $150
+        age_by_id = {
+            r.id: r.age_group
+            for r in db.query(models.Registrant.id, models.Registrant.age_group)
+            .filter(models.Registrant.id.in_([p.registrant_id for p in paid_per_reg] or [0]))
+            .all()
+        }
+        full = 0
+        for r in paid_per_reg:
+            paid = float(r.paid)
+            age = age_by_id.get(r.registrant_id)
+            needed = 150 if age in ("child", "youth") else threshold
+            if paid >= needed:
+                full += 1
         partial = len(paid_per_reg) - full
         return full, partial
 
     conv_full, conv_partial = count_full_partial("convention")
     cruise_full, cruise_partial = count_full_partial("boat_cruise")
+    vendor_full, vendor_partial = count_full_partial("vendor")
 
     return {
         "convention": totals.get("convention", 0),
@@ -144,7 +168,11 @@ def payment_summary(
         "boat_cruise": totals.get("boat_cruise", 0),
         "boat_cruise_full": cruise_full,
         "boat_cruise_partial": cruise_partial,
+        "vendor": totals.get("vendor", 0),
+        "vendor_full": vendor_full,
+        "vendor_partial": vendor_partial,
         "donation": totals.get("donation", 0),
+        "unclassified": totals.get("unclassified", 0),
         "total": sum(totals.values()),
     }
 
