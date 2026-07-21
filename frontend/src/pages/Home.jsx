@@ -6,6 +6,9 @@ const CONVENTION_DATE = new Date('2026-08-12T00:00:00')
 
 const HERO_IMAGES = ['/hotel1.jpg', '/hotel2.jpg', '/hotel3.jpg', '/boat8.jpg']
 
+const VENDOR_STRIPE_URL = 'https://buy.stripe.com/8x228sgAA890aDJ8aUaR20e'
+const CHILD_STRIPE_URL = 'https://buy.stripe.com/9B63cw0BCgFwaDJ3UEaR20g'
+
 function calcTimeLeft(target) {
   const diff = target - Date.now()
   if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 }
@@ -202,17 +205,66 @@ export default function Home() {
             <div className="w-1 h-8 bg-red-600 rounded-full" />
             <h2 className="text-2xl font-black text-[#0a1c46]">Registration Fees</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <RegCard title="Full Registration" price="$300" sub="One-time payment"
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <RegCard title="Full Registration" price="$300" sub="Adults · one-time payment"
               link="https://buy.stripe.com/fZucN60BC3SKcLR9eYaR20j" label="Pay Full Registration" primary />
-            <RegCard title="Partial Payment" price="2 × $150" sub="Pay in two installments"
+            <RegCard title="Partial Payment" price="2 × $150" sub="Adults · two installments"
               link="https://buy.stripe.com/fZucN6gAA3SK139aj2aR20k" label="Pay in 2 Installments" />
+            <RegCard title="Child / Youth Registration" price="$150" sub="Children & youth · one-time payment"
+              link={CHILD_STRIPE_URL} label="Register Child or Youth" />
             <RegCard title="Boat Cruise" price="$220" sub="Heroes Celebration · Aug 15"
               link="https://buy.stripe.com/9AQ4k10e1cW96Ri14e" label="Buy Boat Cruise Ticket" />
+            <RegCard title="Vendor Table" price="$500" sub="One exhibition table"
+              link={VENDOR_STRIPE_URL || 'mailto:joel@diasporanup.org?subject=Vendor%20Table'}
+              label={VENDOR_STRIPE_URL ? 'Reserve Vendor Table' : 'Email to Reserve'} />
           </div>
           <p className="text-xs text-gray-400 mt-5 text-center">
             Registration fees are non-refundable. Swaps accommodated if pre-approved.
+            Child and youth registration is $150. Vendor tables are $500 each.
           </p>
+        </div>
+      </section>
+
+      {/* ─── VENDOR TABLES ─── */}
+      <section className="py-14 px-4 bg-gray-50">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-1 h-8 bg-red-600 rounded-full" />
+            <h2 className="text-2xl font-black text-[#0a1c46]">Vendor Tables</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 items-center">
+            <div>
+              <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                Showcase your business, organization, or products at the convention with a dedicated exhibition table.
+                Ideal for vendors, community groups, and diaspora entrepreneurs.
+              </p>
+              <ul className="text-sm text-gray-600 space-y-2 mb-6">
+                <li className="flex gap-2"><span className="text-red-600 font-bold">•</span> One table — $500</li>
+                <li className="flex gap-2"><span className="text-red-600 font-bold">•</span> High foot traffic during convention days</li>
+                <li className="flex gap-2"><span className="text-red-600 font-bold">•</span> Multiple tables available — pay $500 per table</li>
+              </ul>
+              {VENDOR_STRIPE_URL ? (
+                <a href={VENDOR_STRIPE_URL} target="_blank" rel="noreferrer"
+                  className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-lg text-sm transition">
+                  Reserve Vendor Table — $500
+                </a>
+              ) : (
+                <a href="mailto:joel@diasporanup.org?subject=Vendor%20Table%20Reservation"
+                  className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-lg text-sm transition">
+                  Email to Reserve — $500 / table
+                </a>
+              )}
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Vendor Table</p>
+              <p className="text-4xl font-black text-gray-900 mb-1">$500</p>
+              <p className="text-sm text-gray-500 mb-4">per table · one-time payment</p>
+              <p className="text-xs text-gray-400">
+                After payment you will receive a QR code (same as delegates) for check-in. Questions?{' '}
+                <a href="mailto:joel@diasporanup.org" className="text-[#0a1c46] font-medium underline">joel@diasporanup.org</a>
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

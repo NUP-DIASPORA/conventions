@@ -102,6 +102,47 @@ class TestPaymentClassification:
         assert payment.installment == 1
         assert payment.amount == "110.00"
 
+    def test_vendor_table_payment(self, client, db_session):
+        event = make_checkout_event(
+            email="vendor@example.com",
+            stripe_name="Vendor Co",
+            amount_total=50000,
+            payment_link="link_vendor",
+            payment_intent="pi_vendor_001",
+        )
+        resp = post_webhook(client, event)
+        assert resp.status_code == 200
+
+        registrant = db_session.query(models.Registrant).filter_by(email="vendor@example.com").first()
+        assert registrant is not None
+        assert registrant.vendor is True
+        assert registrant.convention is False
+
+        payment = db_session.query(models.Payment).filter_by(stripe_pi_id="pi_vendor_001").first()
+        assert payment.product_type == "vendor"
+        assert payment.amount == "500.00"
+
+    def test_child_convention_payment(self, client, db_session):
+        event = make_checkout_event(
+            email="child@example.com",
+            stripe_name="Kid Doe",
+            amount_total=15000,
+            payment_link="link_conv_child",
+            payment_intent="pi_child_001",
+        )
+        resp = post_webhook(client, event)
+        assert resp.status_code == 200
+
+        registrant = db_session.query(models.Registrant).filter_by(email="child@example.com").first()
+        assert registrant is not None
+        assert registrant.convention is True
+        assert registrant.age_group == "child"
+
+        payment = db_session.query(models.Payment).filter_by(stripe_pi_id="pi_child_001").first()
+        assert payment.product_type == "convention"
+        assert payment.amount == "150.00"
+        assert payment.installment is None  # full child payment, not adult half
+
 
 # ---------------------------------------------------------------------------
 # Amount-based fallback (no link ID match)
@@ -137,8 +178,37 @@ class TestAmountFallback:
         assert payment.product_type == "boat_cruise"
         assert payment.installment == 1
 
-    def test_unrecognised_amount_skipped(self, client, db_session):
-        """An unknown amount with no link match should be silently skipped."""
+    def test_fallback_vendor_by_amount(self, client, db_session):
+        event = make_checkout_event(
+            email="vendor-fallback@example.com",
+            amount_total=50000,
+            payment_link="unknown_link",
+            payment_intent="pi_fallback_vendor",
+        )
+        resp = post_webhook(client, event)
+        assert resp.status_code == 200
+
+        payment = db_session.query(models.Payment).filter_by(stripe_pi_id="pi_fallback_vendor").first()
+        assert payment.product_type == "vendor"
+        registrant = db_session.query(models.Registrant).filter_by(email="vendor-fallback@example.com").first()
+        assert registrant.vendor is True
+
+    def test_fallback_two_vendor_tables_by_amount(self, client, db_session):
+        event = make_checkout_event(
+            email="vendor2@example.com",
+            amount_total=100000,
+            payment_link="unknown_link",
+            payment_intent="pi_fallback_vendor2",
+        )
+        resp = post_webhook(client, event)
+        assert resp.status_code == 200
+
+        payment = db_session.query(models.Payment).filter_by(stripe_pi_id="pi_fallback_vendor2").first()
+        assert payment.product_type == "vendor"
+        assert payment.amount == "1000.00"
+
+    def test_unrecognised_amount_recorded_unattributed(self, client, db_session):
+        """Unknown amounts are saved as unclassified unattributed payments (not silently dropped)."""
         event = make_checkout_event(
             email="unknown@example.com",
             amount_total=99999,
@@ -147,6 +217,12 @@ class TestAmountFallback:
         )
         resp = post_webhook(client, event)
         assert resp.status_code == 200
+
+        payment = db_session.query(models.Payment).filter_by(stripe_pi_id="pi_unknown_001").first()
+        assert payment is not None
+        assert payment.registrant_id is None
+        assert payment.product_type == "unclassified"
+        assert db_session.query(models.Registrant).filter_by(email="unknown@example.com").first() is None
 
         count = db_session.query(models.Registrant).count()
         assert count == 0

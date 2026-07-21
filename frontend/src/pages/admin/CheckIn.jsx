@@ -28,10 +28,14 @@ export default function AdminCheckIn() {
     refetchInterval: 10000,
   })
 
+  const eventLabel = (type = eventType) => (
+    type === 'boat_cruise' ? 'Boat Cruise' : type === 'vendor' ? 'Vendor' : 'Convention'
+  )
+
   const checkInMutation = useMutation({
     mutationFn: ({ registrantId }) => checkIn(registrantId, eventType, null),
     onSuccess: () => {
-      setSuccessMsg(`✓ Checked in for ${eventType === 'boat_cruise' ? 'Boat Cruise' : 'Convention'}!`)
+      setSuccessMsg(`✓ Checked in for ${eventLabel()}!`)
       setSearch('')
       setScannedRegistrant(null)
       setErrorMsg('')
@@ -102,8 +106,27 @@ export default function AdminCheckIn() {
     }
   }
 
-  const isAlreadyCheckedIn = (r) => eventType === 'boat_cruise' ? r.boat_cruise_checked_in : r.checked_in
-  const canCheckIn = (r) => eventType === 'boat_cruise' ? r.boat_cruise : r.convention
+  const isAlreadyCheckedIn = (r) => {
+    if (eventType === 'boat_cruise') return r.boat_cruise_checked_in
+    if (eventType === 'vendor') return r.vendor_checked_in
+    return r.checked_in
+  }
+  const canCheckIn = (r) => {
+    if (eventType === 'boat_cruise') return r.boat_cruise
+    if (eventType === 'vendor') return r.vendor
+    return r.convention
+  }
+
+  const checkedInCount = stats
+    ? (eventType === 'boat_cruise' ? stats.boat_cruise_checkins
+      : eventType === 'vendor' ? (stats.vendor_checkins ?? 0)
+      : stats.convention_checkins)
+    : 0
+  const registeredCount = stats
+    ? (eventType === 'boat_cruise' ? stats.boat_cruise_registrants
+      : eventType === 'vendor' ? (stats.vendor_registrants ?? 0)
+      : stats.convention_registrants)
+    : 0
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -132,29 +155,26 @@ export default function AdminCheckIn() {
             className={`flex-1 py-3 text-sm font-semibold transition ${eventType === 'boat_cruise' ? 'bg-cyan-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
             ⛵ Boat Cruise
           </button>
+          <button
+            onClick={() => { setEventType('vendor'); setSearch(''); setErrorMsg(''); setSuccessMsg(''); setScannedRegistrant(null) }}
+            className={`flex-1 py-3 text-sm font-semibold transition ${eventType === 'vendor' ? 'bg-violet-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
+            🏪 Vendor
+          </button>
         </div>
 
         {/* Stats bar */}
         {stats && (
           <div className="flex gap-3 text-sm">
             <div className="flex-1 bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 text-center">
-              <p className="text-2xl font-bold text-gray-800">
-                {eventType === 'convention' ? stats.convention_checkins : stats.boat_cruise_checkins}
-              </p>
+              <p className="text-2xl font-bold text-gray-800">{checkedInCount}</p>
               <p className="text-xs text-gray-400 mt-0.5">Checked In</p>
             </div>
             <div className="flex-1 bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 text-center">
-              <p className="text-2xl font-bold text-gray-800">
-                {eventType === 'convention' ? stats.convention_registrants : stats.boat_cruise_registrants}
-              </p>
+              <p className="text-2xl font-bold text-gray-800">{registeredCount}</p>
               <p className="text-xs text-gray-400 mt-0.5">Registered</p>
             </div>
             <div className="flex-1 bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100 text-center">
-              <p className="text-2xl font-bold text-gray-800">
-                {eventType === 'convention'
-                  ? (stats.convention_registrants - stats.convention_checkins)
-                  : (stats.boat_cruise_registrants - stats.boat_cruise_checkins)}
-              </p>
+              <p className="text-2xl font-bold text-gray-800">{Math.max(0, registeredCount - checkedInCount)}</p>
               <p className="text-xs text-gray-400 mt-0.5">Remaining</p>
             </div>
           </div>
@@ -199,7 +219,7 @@ export default function AdminCheckIn() {
                           {r.is_vip && <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700 font-semibold">VIP</span>}
                         </p>
                         <p className="text-xs text-gray-400">{r.email}</p>
-                        {!eligible && <p className="text-xs text-orange-500 mt-0.5">Not registered for {eventType === 'boat_cruise' ? 'boat cruise' : 'convention'}</p>}
+                        {!eligible && <p className="text-xs text-orange-500 mt-0.5">Not registered for {eventLabel().toLowerCase()}</p>}
                       </div>
                       <button
                         onClick={() => checkInMutation.mutate({ registrantId: r.id })}
@@ -208,6 +228,7 @@ export default function AdminCheckIn() {
                           alreadyIn ? 'bg-gray-100 text-gray-400 cursor-default'
                           : !eligible ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                           : eventType === 'boat_cruise' ? 'bg-cyan-600 hover:bg-cyan-700 text-white'
+                          : eventType === 'vendor' ? 'bg-violet-600 hover:bg-violet-700 text-white'
                           : 'bg-green-600 hover:bg-green-700 text-white'
                         }`}>
                         {alreadyIn ? '✓ In' : 'Check In'}
@@ -252,6 +273,7 @@ export default function AdminCheckIn() {
                     <div className="flex gap-2 mt-1">
                       {scannedRegistrant.convention && <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full">Convention</span>}
                       {scannedRegistrant.boat_cruise && <span className="text-xs px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded-full">Boat Cruise</span>}
+                      {scannedRegistrant.vendor && <span className="text-xs px-2 py-0.5 bg-violet-50 text-violet-700 rounded-full">Vendor</span>}
                     </div>
                   </div>
                 </div>
@@ -269,7 +291,10 @@ export default function AdminCheckIn() {
                       {bal.boat_cruise > 0 && (
                         <p className="text-red-600 text-sm mt-0.5">Boat Cruise: <span className="font-semibold">${bal.boat_cruise.toFixed(2)}</span></p>
                       )}
-                      {bal.convention > 0 && bal.boat_cruise > 0 && (
+                      {bal.vendor > 0 && (
+                        <p className="text-red-600 text-sm mt-0.5">Vendor Table: <span className="font-semibold">${bal.vendor.toFixed(2)}</span></p>
+                      )}
+                      {bal.total > 0 && (
                         <p className="text-red-700 text-sm font-semibold mt-1 border-t border-red-200 pt-1">Total Due: ${bal.total.toFixed(2)}</p>
                       )}
                     </div>
@@ -280,19 +305,23 @@ export default function AdminCheckIn() {
                 {isAlreadyCheckedIn(scannedRegistrant) ? (
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
                     <p className="text-green-700 font-semibold text-lg">✓ Already Checked In</p>
-                    <p className="text-green-500 text-sm">This attendee is already checked in for {eventType === 'boat_cruise' ? 'Boat Cruise' : 'Convention'}.</p>
+                    <p className="text-green-500 text-sm">This attendee is already checked in for {eventLabel()}.</p>
                   </div>
                 ) : !canCheckIn(scannedRegistrant) ? (
                   <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-center">
-                    <p className="text-orange-700 font-semibold">Not registered for {eventType === 'boat_cruise' ? 'Boat Cruise' : 'Convention'}</p>
+                    <p className="text-orange-700 font-semibold">Not registered for {eventLabel()}</p>
                   </div>
                 ) : (
                   <button
                     onClick={() => checkInMutation.mutate({ registrantId: scannedRegistrant.id })}
                     disabled={checkInMutation.isPending}
                     className="w-full py-4 rounded-xl text-white font-bold text-lg transition"
-                    style={{ background: eventType === 'boat_cruise' ? '#0891b2' : '#16a34a' }}>
-                    {checkInMutation.isPending ? 'Checking in...' : `✓ Check In for ${eventType === 'boat_cruise' ? 'Boat Cruise' : 'Convention'}`}
+                    style={{
+                      background: eventType === 'boat_cruise' ? '#0891b2'
+                        : eventType === 'vendor' ? '#7c3aed'
+                        : '#16a34a',
+                    }}>
+                    {checkInMutation.isPending ? 'Checking in...' : `✓ Check In for ${eventLabel()}`}
                   </button>
                 )}
 

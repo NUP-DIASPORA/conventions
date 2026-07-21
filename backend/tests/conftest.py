@@ -91,8 +91,10 @@ def client(monkeypatch):
     monkeypatch.setattr("app.routers.stripe_webhook.settings.STRIPE_WEBHOOK_SECRET", TEST_WEBHOOK_SECRET)
     monkeypatch.setattr("app.routers.stripe_webhook.settings.STRIPE_LINK_CONVENTION_FULL",    "link_conv_full")
     monkeypatch.setattr("app.routers.stripe_webhook.settings.STRIPE_LINK_CONVENTION_HALF",    "link_conv_half")
+    monkeypatch.setattr("app.routers.stripe_webhook.settings.STRIPE_LINK_CONVENTION_CHILDREN","link_conv_child")
     monkeypatch.setattr("app.routers.stripe_webhook.settings.STRIPE_LINK_BOAT_CRUISE_FULL",   "link_boat_full")
     monkeypatch.setattr("app.routers.stripe_webhook.settings.STRIPE_LINK_BOAT_CRUISE_PARTIAL","link_boat_partial")
+    monkeypatch.setattr("app.routers.stripe_webhook.settings.STRIPE_LINK_VENDOR",             "link_vendor")
     with TestClient(app) as c:
         yield c
 

@@ -62,6 +62,8 @@ def create_registrant(
             registrant.convention = True
         elif p.product_type == "boat_cruise":
             registrant.boat_cruise = True
+        elif p.product_type == "vendor":
+            registrant.vendor = True
 
     # Generate QR code
     qr_data = get_registrant_qr_data(registrant.id, registrant.email)

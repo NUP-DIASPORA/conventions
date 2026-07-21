@@ -33,6 +33,7 @@ class Registrant(Base):
     # What they registered for
     convention = Column(Boolean, default=False)       # paid for 4-day convention
     boat_cruise = Column(Boolean, default=False)      # paid for Saturday boat cruise
+    vendor = Column(Boolean, default=False)           # paid for vendor table ($500)
 
     # VIP flag
     is_vip = Column(Boolean, default=False)
@@ -40,6 +41,7 @@ class Registrant(Base):
     # Check-in flags (convenience — source of truth is check_ins table)
     checked_in = Column(Boolean, default=False)
     boat_cruise_checked_in = Column(Boolean, default=False)
+    vendor_checked_in = Column(Boolean, default=False)
 
     entered_by = Column(String, nullable=True)
     entered_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -58,7 +60,7 @@ class Payment(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     registrant_id = Column(Integer, ForeignKey("registrants.id"), nullable=True)  # null = unattributed
-    product_type = Column(String, nullable=False)  # "convention", "boat_cruise", "donation"
+    product_type = Column(String, nullable=False)  # "convention", "boat_cruise", "vendor", "donation", "unclassified"
     installment = Column(Integer, nullable=True)   # 1 or 2; null = full payment
     amount = Column(String, nullable=False)        # e.g. "300.00"
     payer_name = Column(String, nullable=True)     # if someone else paid
@@ -75,7 +77,7 @@ class CheckIn(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     registrant_id = Column(Integer, ForeignKey("registrants.id"), nullable=False)
-    event_type = Column(String, nullable=False, default="convention")  # "convention" | "boat_cruise"
+    event_type = Column(String, nullable=False, default="convention")  # "convention" | "boat_cruise" | "vendor"
     conference_day = Column(Integer, nullable=True)   # 1-4 for convention; null for boat cruise
     checked_in_at = Column(DateTime(timezone=True), server_default=func.now())
     checked_in_by = Column(String, nullable=True)

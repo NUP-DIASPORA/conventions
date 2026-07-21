@@ -74,10 +74,12 @@ npm run build
 | `FRONTEND_URL` | Live frontend URL (for CORS) |
 | `STRIPE_SECRET_KEY` | Stripe live secret key (`sk_live_...`) |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret (`whsec_...`) |
-| `STRIPE_LINK_CONVENTION_FULL` | Slug from `buy.stripe.com/<slug>` for $300 link |
-| `STRIPE_LINK_CONVENTION_HALF` | Slug for $150 half payment link |
-| `STRIPE_LINK_BOAT_CRUISE_FULL` | Slug for $220 boat cruise link |
-| `STRIPE_LINK_BOAT_CRUISE_PARTIAL` | Slug for $110 partial boat cruise link |
+| `STRIPE_LINK_CONVENTION_FULL` | `plink_…` ID for $300 link (not the buy.stripe.com slug) |
+| `STRIPE_LINK_CONVENTION_HALF` | `plink_…` ID for $150 half payment link |
+| `STRIPE_LINK_CONVENTION_CHILDREN` | `plink_…` ID for $150 child/youth registration link |
+| `STRIPE_LINK_BOAT_CRUISE_FULL` | `plink_…` ID for $220 boat cruise link |
+| `STRIPE_LINK_BOAT_CRUISE_PARTIAL` | `plink_…` ID for $110 partial boat cruise link |
+| `STRIPE_LINK_VENDOR` | `plink_…` ID for $500 vendor table link |
 
 ### Local development
 Create `backend/.env.local` to override values without touching production:
@@ -101,16 +103,24 @@ All other values are inherited from `backend/.env`. Render ignores `.env.local` 
 
 ## Stripe Webhook Automation
 
-When a delegate pays via any of the 4 Stripe payment links, Stripe fires a `checkout.session.completed` event to:
+When a delegate pays via any of the Stripe payment links, Stripe fires a `checkout.session.completed` event to:
 
 ```
-https://app.diasporanup.org/api/webhooks/stripe
+https://conventions.onrender.com/api/webhooks/stripe
 ```
+
+**Important:** The endpoint must be the Render API host above. Pointing Stripe at the frontend
+(`app.diasporanup.org`) returns HTML `200` from Hostinger and never reaches this handler.
+
+Also set `STRIPE_LINK_*` to the `plink_…` IDs from Stripe Dashboard → Payment Links
+(not the `buy.stripe.com` URL slugs). Amount-based fallback still classifies known prices
+if a link ID is missing or wrong.
 
 The webhook automatically:
 - Creates a new `Registrant` record (with QR code) if the email isn't in the database yet
-- Or updates an existing registrant's `convention` / `boat_cruise` flags
+- Or updates an existing registrant's `convention` / `boat_cruise` / `vendor` flags
 - Records the `Payment` with the Stripe payment intent ID
+- Records unrecognized amounts as **unattributed / unclassified** payments for admin linking
 - Prevents duplicate processing if the same event fires twice
 
 ### Payment links
@@ -118,14 +128,16 @@ The webhook automatically:
 |---|---|---|
 | NUP Convention LA 2026 | $300 | Convention full payment |
 | NUP LA 2026 – Half Payment | $150 | Convention partial (installment 1) |
+| Child / Youth Registration | $150 | Convention child/youth (`age_group=child`; admin can set youth) |
 | Boat Cruise | $220 | Boat cruise full payment |
 | Boat Cruise – Partial Payment | $110 | Boat cruise partial (installment 1) |
+| Vendor Table | $500 | One exhibition table (multiples of $500 supported) |
 
 ### Setup
 1. Add `STRIPE_WEBHOOK_SECRET` from Stripe Dashboard → Developers → Webhooks → your endpoint
-2. Add the 4 `STRIPE_LINK_*` slugs (the part after `buy.stripe.com/`) to your environment
-3. The webhook endpoint must be active and reachable at the URL above
-
+2. Ensure the webhook URL is `https://conventions.onrender.com/api/webhooks/stripe` and listens for `checkout.session.completed`
+3. Add the `STRIPE_LINK_*` values as `plink_…` IDs (Dashboard → Payment Links → open link)
+4. Create a $500 Vendor Table payment link in Stripe, then set `STRIPE_LINK_VENDOR` and paste the `buy.stripe.com` URL into `VENDOR_STRIPE_URL` in `frontend/src/pages/Home.jsx`
 ---
 
 ## Running Tests

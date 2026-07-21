@@ -184,10 +184,11 @@ export default function AdminDashboard() {
           <p className="text-base" style={{ color: '#a8b8d8' }}>August 12 – 16, 2026</p>
 
           {stats && (
-            <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="mt-8 grid grid-cols-2 sm:grid-cols-5 gap-4">
               <HeroStat label="Total Registrants" value={stats.total_registrants} />
               <HeroStat label="Registration" value={stats.convention_registrants} />
               <HeroStat label="Boat Cruise" value={stats.boat_cruise_registrants} />
+              <HeroStat label="Vendors" value={stats.vendor_registrants ?? 0} />
               <HeroStat label="Checked In" value={stats.convention_checkins} accent />
             </div>
           )}
@@ -200,7 +201,7 @@ export default function AdminDashboard() {
         {stats && (
           <section>
             <SectionHeading>Check-in Progress</SectionHeading>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <CheckinCard
                 label="Registration Check-ins"
                 checked={stats.convention_checkins}
@@ -213,6 +214,12 @@ export default function AdminDashboard() {
                 total={stats.boat_cruise_registrants}
                 color="#cc2229"
               />
+              <CheckinCard
+                label="Vendor Check-ins"
+                checked={stats.vendor_checkins ?? 0}
+                total={stats.vendor_registrants ?? 0}
+                color="#7c3aed"
+              />
             </div>
           </section>
         )}
@@ -221,7 +228,7 @@ export default function AdminDashboard() {
         {revenue && stats && (
           <section>
             <SectionHeading>Payment Breakdown</SectionHeading>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <PaymentBreakdownCard
                 label="Registration"
                 icon="🎟️"
@@ -239,6 +246,15 @@ export default function AdminDashboard() {
                 full={revenue.boat_cruise_full}
                 partial={revenue.boat_cruise_partial}
                 collected={revenue.boat_cruise}
+              />
+              <PaymentBreakdownCard
+                label="Vendor Tables"
+                icon="🏪"
+                color="#7c3aed"
+                total={stats.vendor_registrants ?? 0}
+                full={revenue.vendor_full ?? 0}
+                partial={revenue.vendor_partial ?? 0}
+                collected={revenue.vendor ?? 0}
               />
               <VipCard
                 total={stats.vip_registrants ?? 0}

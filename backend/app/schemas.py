@@ -32,7 +32,7 @@ class AdminOut(BaseModel):
 # --- Payments ---
 class PaymentInline(BaseModel):
     """Embedded in RegistrantCreate to record payments at registration time."""
-    product_type: str          # "convention", "boat_cruise", "donation"
+    product_type: str          # "convention", "boat_cruise", "vendor", "donation"
     installment: Optional[int] = None   # 1 or 2; null = full payment
     amount: str
     payer_name: Optional[str] = None
@@ -79,6 +79,7 @@ class RegistrantCreate(BaseModel):
     age_group: str = "adult"           # child, youth, adult
     convention: bool = False            # registered for convention
     boat_cruise: bool = False           # registered for boat cruise
+    vendor: bool = False                # registered for vendor table
     is_vip: bool = False
     payments: List[PaymentInline] = []  # payments to record at registration time
     notes: Optional[str] = None
@@ -96,9 +97,11 @@ class RegistrantUpdate(BaseModel):
     age_group: Optional[str] = None
     convention: Optional[bool] = None
     boat_cruise: Optional[bool] = None
+    vendor: Optional[bool] = None
     is_vip: Optional[bool] = None
     checked_in: Optional[bool] = None
     boat_cruise_checked_in: Optional[bool] = None
+    vendor_checked_in: Optional[bool] = None
     notes: Optional[str] = None
 
 class RegistrantOut(BaseModel):
@@ -115,9 +118,11 @@ class RegistrantOut(BaseModel):
     age_group: str
     convention: bool
     boat_cruise: bool
+    vendor: bool
     is_vip: bool
     checked_in: bool
     boat_cruise_checked_in: bool
+    vendor_checked_in: bool
     entered_by: Optional[str]
     entered_at: datetime
     registered_at: datetime
@@ -126,7 +131,7 @@ class RegistrantOut(BaseModel):
     deleted_at: Optional[datetime] = None
     payments: List[PaymentOut] = []
 
-    @field_validator('checked_in', 'boat_cruise_checked_in', 'convention', 'boat_cruise', 'is_vip', mode='before')
+    @field_validator('checked_in', 'boat_cruise_checked_in', 'vendor_checked_in', 'convention', 'boat_cruise', 'vendor', 'is_vip', mode='before')
     @classmethod
     def coerce_none_to_false(cls, v):
         return v if v is not None else False
@@ -152,8 +157,8 @@ class AuditLogOut(BaseModel):
 # --- Check-ins ---
 class CheckInCreate(BaseModel):
     registrant_id: int
-    event_type: str = "convention"        # "convention" or "boat_cruise"
-    conference_day: Optional[int] = None  # 1-4 for convention; omit for boat cruise
+    event_type: str = "convention"        # "convention", "boat_cruise", or "vendor"
+    conference_day: Optional[int] = None  # 1-4 for convention; omit for boat cruise / vendor
 
 class CheckInOut(BaseModel):
     id: int

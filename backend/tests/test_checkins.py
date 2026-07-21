@@ -76,6 +76,28 @@ class TestCheckIn:
         }, headers=auth)
         assert resp.status_code == 400
 
+    def test_vendor_checkin(self, client, auth):
+        resp = client.post("/api/registrants", json={
+            "first_name": "Vera", "last_name": "Vendor",
+            "email": "vera.checkin@example.com", "age_group": "adult",
+            "vendor": True,
+        }, headers=auth)
+        assert resp.status_code == 201
+        rid = resp.json()["id"]
+
+        ok = client.post("/api/checkins", json={
+            "registrant_id": rid, "event_type": "vendor",
+        }, headers=auth)
+        assert ok.status_code == 201
+
+        reg = client.get(f"/api/registrants/{rid}", headers=auth).json()
+        assert reg["vendor_checked_in"] is True
+
+        dup = client.post("/api/checkins", json={
+            "registrant_id": rid, "event_type": "vendor",
+        }, headers=auth)
+        assert dup.status_code == 400
+
     def test_checkin_requires_auth(self, client, registrant=None):
         resp = client.post("/api/checkins", json={
             "registrant_id": 1, "event_type": "convention"

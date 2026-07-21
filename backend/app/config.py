@@ -16,12 +16,19 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: Optional[str] = None      # used for API calls to Stripe
     STRIPE_WEBHOOK_SECRET: Optional[str] = None  # used to verify incoming webhooks
 
-    # Payment link IDs — copy from your Stripe Dashboard URLs (the part after buy.stripe.com/)
-    # e.g. if the URL is buy.stripe.com/fZucN60BC3SKcLR9eYaR20j, the ID is fZucN60BC3SKcLR9eYaR20j
+    # Payment link IDs — use the plink_… ID from Stripe Dashboard → Payment Links → open the link
+    # (URL looks like dashboard.stripe.com/payment-links/plink_xxx). Do NOT use the buy.stripe.com slug;
+    # checkout.session.completed sends payment_link as plink_…, not the public URL slug.
+    # Amount-based fallback still works if these are unset or mismatched.
     STRIPE_LINK_CONVENTION_FULL: Optional[str] = None       # $300
     STRIPE_LINK_CONVENTION_HALF: Optional[str] = None       # $150
+    STRIPE_LINK_CONVENTION_CHILDREN: Optional[str] = None   # $150 child/youth registration
     STRIPE_LINK_BOAT_CRUISE_FULL: Optional[str] = None      # $220
     STRIPE_LINK_BOAT_CRUISE_PARTIAL: Optional[str] = None   # $110
+    STRIPE_LINK_VENDOR: Optional[str] = None                # $500 vendor table
+
+    # When true, mutating API methods are blocked (safe prod browsing from local)
+    READ_ONLY: bool = False
 
     class Config:
         # .env.local overrides .env — use it for local dev without touching production values

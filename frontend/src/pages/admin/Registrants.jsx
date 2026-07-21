@@ -63,17 +63,22 @@ function CountrySelect({ value, onChange }) {
 // Pricing reference
 const PRICES = {
   convention_adult: '300.00',
-  convention_child: '160.00',
+  convention_child: '150.00',
   convention_installment_adult: '150.00',
-  convention_installment_child: '80.00',
+  convention_installment_child: '75.00',
   boat_cruise: '220.00',
   boat_cruise_installment: '110.00',
+  vendor: '500.00',
 }
 
 // Expected total per product given registrant age group
 function expectedTotal(productType, ageGroup) {
-  if (productType === 'convention') return ageGroup === 'child' ? 160 : 300
+  if (productType === 'convention') {
+    if (ageGroup === 'child' || ageGroup === 'youth') return 150
+    return 300
+  }
   if (productType === 'boat_cruise') return 220
+  if (productType === 'vendor') return 500
   return null  // donations have no expected total
 }
 
@@ -92,10 +97,11 @@ function balanceOwed(registrant, productType) {
   if (registrant.is_vip) return null
   if (productType === 'convention' && !registrant.convention) return null
   if (productType === 'boat_cruise' && !registrant.boat_cruise) return null
+  if (productType === 'vendor' && !registrant.vendor) return null
   const expected = expectedTotal(productType, registrant.age_group)
   if (expected === null) return null
   const paid = paidTotal(registrant.payments, productType)
-  if (productType === 'convention' && registrant.age_group !== 'child' && paid >= EARLY_BIRD_CONVENTION) return 0
+  if (productType === 'convention' && registrant.age_group !== 'child' && registrant.age_group !== 'youth' && paid >= EARLY_BIRD_CONVENTION) return 0
   return Math.max(0, expected - paid)
 }
 
@@ -122,7 +128,9 @@ function paymentSummary(payments) {
 function productLabel(type) {
   if (type === 'convention') return 'Convention'
   if (type === 'boat_cruise') return 'Boat Cruise'
+  if (type === 'vendor') return 'Vendor Table'
   if (type === 'donation') return 'Donation'
+  if (type === 'unclassified') return 'Unclassified'
   return type
 }
 
@@ -200,7 +208,8 @@ export function DeletedRegistrantsView() {
                     <div className="flex flex-col gap-1">
                       {r.convention && <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs w-fit">Convention</span>}
                       {r.boat_cruise && <span className="px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded-full text-xs w-fit">Boat Cruise</span>}
-                      {!r.convention && !r.boat_cruise && <span className="text-gray-300 text-xs">—</span>}
+                      {r.vendor && <span className="px-2 py-0.5 bg-violet-50 text-violet-700 rounded-full text-xs w-fit">Vendor</span>}
+                      {!r.convention && !r.boat_cruise && !r.vendor && <span className="text-gray-300 text-xs">—</span>}
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -219,9 +228,11 @@ export function DeletedRegistrantsView() {
                     {(() => {
                       const convBal = balanceOwed(r, 'convention')
                       const cruiseBal = balanceOwed(r, 'boat_cruise')
+                      const vendorBal = balanceOwed(r, 'vendor')
                       const lines = []
                       if (convBal !== null) lines.push({ label: 'Conv', amount: convBal })
                       if (cruiseBal !== null) lines.push({ label: 'Cruise', amount: cruiseBal })
+                      if (vendorBal !== null) lines.push({ label: 'Vendor', amount: vendorBal })
                       if (lines.length === 0) return <span className="text-gray-300 text-xs">—</span>
                       return (
                         <div className="flex flex-col gap-1">
@@ -244,6 +255,16 @@ export function DeletedRegistrantsView() {
                       {r.boat_cruise && (
                         <span className={`px-2 py-0.5 rounded-full text-xs ${r.boat_cruise_checked_in ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
                           Cruise: {r.boat_cruise_checked_in ? 'In' : 'Pending'}
+                        </span>
+                      )}
+                      {r.vendor && (
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${r.vendor_checked_in ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                          Vendor: {r.vendor_checked_in ? 'In' : 'Pending'}
+                        </span>
+                      )}
+                      {r.vendor && (
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${r.vendor_checked_in ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                          Vendor: {r.vendor_checked_in ? 'In' : 'Pending'}
                         </span>
                       )}
                     </div>
@@ -311,7 +332,7 @@ export function DeletedRegistrantsView() {
 export default function AdminRegistrants() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
-  const [filters, setFilters] = useState({ registered: '', payment: '', vip: '', age_group: '', location: '' })
+  const [filters, setFilters] = useState({ registered: '', payment: '', vip: '', age_group: '', location: '', sort: 'first_asc' })
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState('')
@@ -377,6 +398,7 @@ export default function AdminRegistrants() {
       age_group: r.age_group,
       convention: r.convention,
       boat_cruise: r.boat_cruise,
+      vendor: r.vendor,
       notes: r.notes || '',
     })
     setEditError('')
@@ -418,12 +440,19 @@ export default function AdminRegistrants() {
   // Auto-fill payment amount based on product type + age group
   const defaultAmount = (productType, ageGroup, installment) => {
     if (productType === 'convention') {
-      if (installment) return ageGroup === 'child' ? PRICES.convention_installment_child : PRICES.convention_installment_adult
-      return ageGroup === 'child' ? PRICES.convention_child : PRICES.convention_adult
+      if (installment) {
+        return (ageGroup === 'child' || ageGroup === 'youth')
+          ? PRICES.convention_installment_child
+          : PRICES.convention_installment_adult
+      }
+      return (ageGroup === 'child' || ageGroup === 'youth')
+        ? PRICES.convention_child
+        : PRICES.convention_adult
     }
     if (productType === 'boat_cruise') {
       return installment ? PRICES.boat_cruise_installment : PRICES.boat_cruise
     }
+    if (productType === 'vendor') return PRICES.vendor
     return ''
   }
 
@@ -501,40 +530,62 @@ export default function AdminRegistrants() {
 
   const sel = 'border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3572] bg-white text-gray-700 shadow-sm'
 
-  const filteredRegistrants = registrants.filter(r => {
-    if (filters.registered === 'convention' && (!r.convention || r.boat_cruise)) return false
-    if (filters.registered === 'boat_cruise' && (!r.boat_cruise || r.convention)) return false
-    if (filters.registered === 'both' && !(r.convention && r.boat_cruise)) return false
-    if (filters.vip === 'vip' && !r.is_vip) return false
-    if (filters.vip === 'non_vip' && r.is_vip) return false
-    if (filters.age_group && r.age_group !== filters.age_group) return false
-    if (filters.location) {
-      const loc = filters.location.toLowerCase()
-      if (!(r.country?.toLowerCase().includes(loc) || r.state?.toLowerCase().includes(loc))) return false
+  const filteredRegistrants = (() => {
+    let list = registrants.filter(r => {
+      if (filters.registered === 'convention' && !r.convention) return false
+      if (filters.registered === 'boat_cruise' && !r.boat_cruise) return false
+      if (filters.registered === 'both' && !(r.convention && r.boat_cruise)) return false
+      if (filters.registered === 'vendor' && !r.vendor) return false
+      if (filters.vip === 'vip' && !r.is_vip) return false
+      if (filters.vip === 'non_vip' && r.is_vip) return false
+      if (filters.age_group && r.age_group !== filters.age_group) return false
+      if (filters.location) {
+        const loc = filters.location.toLowerCase()
+        if (!(r.country?.toLowerCase().includes(loc) || r.state?.toLowerCase().includes(loc))) return false
+      }
+      if (filters.payment) {
+        const convPaid = paidTotal(r.payments, 'convention')
+        const cruisePaid = paidTotal(r.payments, 'boat_cruise')
+        const vendorPaid = paidTotal(r.payments, 'vendor')
+        const totalPaid = convPaid + cruisePaid + vendorPaid
+        const FULL_THRESHOLD = { convention: 280, boat_cruise: 220, vendor: 500 }
+        const convFull = r.convention ? (convPaid >= FULL_THRESHOLD.convention) : true
+        const cruiseFull = r.boat_cruise ? (cruisePaid >= FULL_THRESHOLD.boat_cruise) : true
+        const vendorFull = r.vendor ? (vendorPaid >= FULL_THRESHOLD.vendor) : true
+        const isFullyPaid = convFull && cruiseFull && vendorFull
+        const isPartial = totalPaid > 0 && !isFullyPaid
+        if (filters.payment === 'none' && totalPaid > 0) return false
+        if (filters.payment === 'full' && (!r.is_vip && !isFullyPaid)) return false
+        if (filters.payment === 'partial' && !isPartial) return false
+      }
+      return true
+    })
+
+    if (filters.sort === 'name_asc' || filters.sort === 'name_desc' ||
+        filters.sort === 'first_asc' || filters.sort === 'first_desc' ||
+        filters.sort === 'last_asc' || filters.sort === 'last_desc') {
+      const dir = filters.sort.endsWith('_desc') ? -1 : 1
+      const byFirst = filters.sort.startsWith('first_') || filters.sort === 'name_asc' || filters.sort === 'name_desc'
+      list = [...list].sort((a, b) => {
+        const primaryA = byFirst ? (a.first_name || '') : (a.last_name || '')
+        const primaryB = byFirst ? (b.first_name || '') : (b.last_name || '')
+        const secondaryA = byFirst ? (a.last_name || '') : (a.first_name || '')
+        const secondaryB = byFirst ? (b.last_name || '') : (b.first_name || '')
+        const primary = primaryA.localeCompare(primaryB, undefined, { sensitivity: 'base' })
+        if (primary !== 0) return primary * dir
+        return secondaryA.localeCompare(secondaryB, undefined, { sensitivity: 'base' }) * dir
+      })
     }
-    if (filters.payment) {
-      const convPaid = paidTotal(r.payments, 'convention')
-      const cruisePaid = paidTotal(r.payments, 'boat_cruise')
-      const totalPaid = convPaid + cruisePaid
-      const FULL_THRESHOLD = { convention: 280, boat_cruise: 220 }
-      const convFull = r.convention ? (convPaid >= FULL_THRESHOLD.convention) : true
-      const cruiseFull = r.boat_cruise ? (cruisePaid >= FULL_THRESHOLD.boat_cruise) : true
-      const isFullyPaid = convFull && cruiseFull
-      const isPartial = totalPaid > 0 && !isFullyPaid
-      if (filters.payment === 'none' && totalPaid > 0) return false
-      if (filters.payment === 'full' && (!r.is_vip && !isFullyPaid)) return false
-      if (filters.payment === 'partial' && !isPartial) return false
-    }
-    return true
-  })
+    return list
+  })()
 
   const downloadCSV = () => {
     const headers = [
       'First Name', 'Last Name', 'Email', 'Phone',
       'Address', 'City', 'State', 'Country', 'Continent',
-      'Age Group', 'VIP', 'Convention', 'Boat Cruise',
-      'Conv Checked In', 'Cruise Checked In',
-      'Conv Paid', 'Cruise Paid', 'Conv Balance', 'Cruise Balance',
+      'Age Group', 'VIP', 'Convention', 'Boat Cruise', 'Vendor',
+      'Conv Checked In', 'Cruise Checked In', 'Vendor Checked In',
+      'Conv Paid', 'Cruise Paid', 'Vendor Paid', 'Conv Balance', 'Cruise Balance', 'Vendor Balance',
       'Registered At', 'Entered By', 'Notes',
     ]
     const escape = (val) => {
@@ -545,18 +596,22 @@ export default function AdminRegistrants() {
     const rows = filteredRegistrants.map(r => {
       const convPaid = paidTotal(r.payments, 'convention')
       const cruisePaid = paidTotal(r.payments, 'boat_cruise')
+      const vendorPaid = paidTotal(r.payments, 'vendor')
       const convBal = balanceOwed(r, 'convention')
       const cruiseBal = balanceOwed(r, 'boat_cruise')
+      const vendorBal = balanceOwed(r, 'vendor')
       return [
         r.first_name, r.last_name, r.email, r.phone || '',
         r.address || '', r.city || '', r.state || '', r.country || '', r.continent || '',
         r.age_group, r.is_vip ? 'Yes' : 'No',
-        r.convention ? 'Yes' : 'No', r.boat_cruise ? 'Yes' : 'No',
-        r.checked_in ? 'Yes' : 'No', r.boat_cruise_checked_in ? 'Yes' : 'No',
+        r.convention ? 'Yes' : 'No', r.boat_cruise ? 'Yes' : 'No', r.vendor ? 'Yes' : 'No',
+        r.checked_in ? 'Yes' : 'No', r.boat_cruise_checked_in ? 'Yes' : 'No', r.vendor_checked_in ? 'Yes' : 'No',
         convPaid > 0 ? `$${convPaid.toFixed(2)}` : '',
         cruisePaid > 0 ? `$${cruisePaid.toFixed(2)}` : '',
+        vendorPaid > 0 ? `$${vendorPaid.toFixed(2)}` : '',
         convBal != null && convBal > 0 ? `$${convBal.toFixed(2)}` : '',
         cruiseBal != null && cruiseBal > 0 ? `$${cruiseBal.toFixed(2)}` : '',
+        vendorBal != null && vendorBal > 0 ? `$${vendorBal.toFixed(2)}` : '',
         new Date(r.registered_at).toLocaleDateString(),
         r.entered_by || '', r.notes || '',
       ].map(escape).join(',')
@@ -607,9 +662,10 @@ export default function AdminRegistrants() {
           <div className="flex flex-wrap gap-2 items-center">
             <select value={filters.registered} onChange={e => setFilters(f => ({ ...f, registered: e.target.value }))} className={sel}>
               <option value="">🎟 All Events</option>
-              <option value="convention">Convention only</option>
-              <option value="boat_cruise">Boat Cruise only</option>
-              <option value="both">Both</option>
+              <option value="convention">Convention</option>
+              <option value="boat_cruise">Boat Cruise</option>
+              <option value="vendor">Vendors</option>
+              <option value="both">Convention + Boat Cruise</option>
             </select>
             <select value={filters.payment} onChange={e => setFilters(f => ({ ...f, payment: e.target.value }))} className={sel}>
               <option value="">💳 All Payments</option>
@@ -628,11 +684,18 @@ export default function AdminRegistrants() {
               <option value="youth">Youth</option>
               <option value="child">Child</option>
             </select>
+            <select value={filters.sort} onChange={e => setFilters(f => ({ ...f, sort: e.target.value }))} className={sel}>
+              <option value="first_asc">A–Z (first name)</option>
+              <option value="last_asc">A–Z (last name)</option>
+              <option value="first_desc">Z–A (first name)</option>
+              <option value="last_desc">Z–A (last name)</option>
+              <option value="">↕ Registration order</option>
+            </select>
             <input type="text" placeholder="🌍 Country / state..."
               value={filters.location} onChange={e => setFilters(f => ({ ...f, location: e.target.value }))}
               className={sel + ' placeholder-gray-400'} />
-            {Object.values(filters).some(v => v) && (
-              <button onClick={() => setFilters({ registered: '', payment: '', vip: '', age_group: '', location: '' })}
+            {(filters.registered || filters.payment || filters.vip || filters.age_group || filters.location || filters.sort !== 'first_asc') && (
+              <button onClick={() => setFilters({ registered: '', payment: '', vip: '', age_group: '', location: '', sort: 'first_asc' })}
                 className="text-xs text-red-500 hover:text-red-700 px-3 py-2 border border-red-200 rounded-lg bg-red-50 font-medium">
                 ✕ Clear filters
               </button>
@@ -642,10 +705,21 @@ export default function AdminRegistrants() {
 
         {isLoading && <p className="text-gray-400 text-center py-10">Loading...</p>}
 
+        {!isLoading && (
+          <p className="text-sm text-gray-600 mb-3">
+            Showing <span className="font-semibold text-gray-900">{filteredRegistrants.length}</span>
+            {filteredRegistrants.length !== registrants.length && (
+              <span className="text-gray-400"> of {registrants.length}</span>
+            )}
+            {' '}registrant{filteredRegistrants.length === 1 ? '' : 's'}
+          </p>
+        )}
+
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
           <table className="w-full text-sm whitespace-nowrap">
             <thead style={{ background: 'linear-gradient(to right, #111e45, #1a3572)' }} className="text-white text-xs uppercase tracking-wider">
               <tr>
+                <th className="px-3 py-3.5 text-left font-semibold w-12">#</th>
                 <th className="px-4 py-3.5 text-left font-semibold">Attendee</th>
                 <th className="px-4 py-3.5 text-left font-semibold">Contact</th>
                 <th className="px-4 py-3.5 text-left font-semibold">Location</th>
@@ -661,6 +735,7 @@ export default function AdminRegistrants() {
             <tbody className="divide-y divide-gray-100">
               {filteredRegistrants.map((r, idx) => (
                 <tr key={r.id} className={`hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                  <td className="px-3 py-3 text-gray-400 text-xs font-medium tabular-nums">{idx + 1}</td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-800">{r.first_name} {r.last_name} {r.is_vip && <span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700 font-semibold">VIP</span>}</p>
                     <p className="text-xs text-gray-400">{new Date(r.registered_at).toLocaleDateString()}</p>
@@ -688,7 +763,10 @@ export default function AdminRegistrants() {
                       {r.boat_cruise && (
                         <span className="px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded-full text-xs w-fit">Boat Cruise</span>
                       )}
-                      {!r.convention && !r.boat_cruise && (
+                      {r.vendor && (
+                        <span className="px-2 py-0.5 bg-violet-50 text-violet-700 rounded-full text-xs w-fit">Vendor</span>
+                      )}
+                      {!r.convention && !r.boat_cruise && !r.vendor && (
                         <span className="text-gray-300 text-xs">—</span>
                       )}
                     </div>
@@ -724,9 +802,11 @@ export default function AdminRegistrants() {
                     {(() => {
                       const convBal = balanceOwed(r, 'convention')
                       const cruiseBal = balanceOwed(r, 'boat_cruise')
+                      const vendorBal = balanceOwed(r, 'vendor')
                       const lines = []
                       if (convBal !== null) lines.push({ label: 'Conv', amount: convBal })
                       if (cruiseBal !== null) lines.push({ label: 'Cruise', amount: cruiseBal })
+                      if (vendorBal !== null) lines.push({ label: 'Vendor', amount: vendorBal })
                       if (lines.length === 0) return <span className="text-gray-300 text-xs">—</span>
                       return (
                         <div className="flex flex-col gap-1">
@@ -755,6 +835,11 @@ export default function AdminRegistrants() {
                           Cruise: {r.boat_cruise_checked_in ? 'In' : 'Pending'}
                         </span>
                       )}
+                      {r.vendor && (
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${r.vendor_checked_in ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                          Vendor: {r.vendor_checked_in ? 'In' : 'Pending'}
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-xs">{r.entered_by || '—'}</td>
@@ -770,7 +855,7 @@ export default function AdminRegistrants() {
                 </tr>
               ))}
               {!isLoading && filteredRegistrants.length === 0 && (
-                <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">No registrants found.</td></tr>
+                <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-400">No registrants found.</td></tr>
               )}
             </tbody>
           </table>
@@ -847,6 +932,10 @@ export default function AdminRegistrants() {
                     <input type="checkbox" checked={form.boat_cruise} onChange={e => setForm({ ...form, boat_cruise: e.target.checked })} className="w-4 h-4 rounded" />
                     Boat Cruise
                   </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" checked={form.vendor} onChange={e => setForm({ ...form, vendor: e.target.checked })} className="w-4 h-4 rounded" />
+                    Vendor Table
+                  </label>
                   <label className="flex items-center gap-2 text-sm text-amber-600 cursor-pointer font-medium">
                     <input type="checkbox" checked={form.is_vip} onChange={e => setForm({ ...form, is_vip: e.target.checked })} className="w-4 h-4 rounded" />
                     VIP Guest
@@ -863,6 +952,8 @@ export default function AdminRegistrants() {
                       className="text-xs text-blue-600 hover:text-blue-800">+ Convention</button>
                     <button type="button" onClick={() => addInlinePayment('boat_cruise')}
                       className="text-xs text-cyan-600 hover:text-cyan-800">+ Boat Cruise</button>
+                    <button type="button" onClick={() => addInlinePayment('vendor')}
+                      className="text-xs text-violet-600 hover:text-violet-800">+ Vendor</button>
                     <button type="button" onClick={() => addInlinePayment('donation')}
                       className="text-xs text-green-600 hover:text-green-800">+ Donation</button>
                   </div>
@@ -880,12 +971,16 @@ export default function AdminRegistrants() {
                         className="text-red-400 hover:text-red-600 text-xs">Remove</button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <select value={p.installment ?? ''} onChange={e => updateInlinePayment(idx, 'installment', e.target.value || null)}
-                        className={input}>
-                        <option value="">Full payment</option>
-                        <option value="1">Installment 1</option>
-                        <option value="2">Installment 2</option>
-                      </select>
+                      {p.product_type !== 'donation' && p.product_type !== 'vendor' ? (
+                        <select value={p.installment ?? ''} onChange={e => updateInlinePayment(idx, 'installment', e.target.value || null)}
+                          className={input}>
+                          <option value="">Full payment</option>
+                          <option value="1">Installment 1</option>
+                          <option value="2">Installment 2</option>
+                        </select>
+                      ) : (
+                        <div />
+                      )}
                       <input placeholder="Amount" value={p.amount}
                         onChange={e => updateInlinePayment(idx, 'amount', e.target.value)}
                         className={input} />
@@ -963,7 +1058,7 @@ export default function AdminRegistrants() {
               }
 
               {/* Balance summary — only for linked non-VIP registrants */}
-              {!isUnattributed && !paymentTarget.is_vip && (paymentTarget.convention || paymentTarget.boat_cruise) && (
+              {!isUnattributed && !paymentTarget.is_vip && (paymentTarget.convention || paymentTarget.boat_cruise || paymentTarget.vendor) && (
                 <div className="mb-4 space-y-1">
                   {paymentTarget.convention && (() => {
                     const exp = expectedTotal('convention', ageGroup)
@@ -997,6 +1092,21 @@ export default function AdminRegistrants() {
                       </div>
                     )
                   })()}
+                  {paymentTarget.vendor && (() => {
+                    const paid = paidTotal(paymentTarget.payments, 'vendor')
+                    const bal = Math.max(0, 500 - paid)
+                    return (
+                      <div className="flex justify-between text-xs px-3 py-2 rounded-lg bg-gray-50 border">
+                        <span className="text-gray-600">Vendor Table</span>
+                        <span>
+                          <span className="text-gray-500">Paid ${paid.toFixed(2)} of $500</span>
+                          {bal > 0
+                            ? <span className="ml-2 text-red-600 font-medium">${bal.toFixed(2)} due</span>
+                            : <span className="ml-2 text-green-600 font-medium">✓ Paid in full</span>}
+                        </span>
+                      </div>
+                    )
+                  })()}
                 </div>
               )}
 
@@ -1007,11 +1117,12 @@ export default function AdminRegistrants() {
                   <option value="">Select product *</option>
                   <option value="convention">Convention</option>
                   <option value="boat_cruise">Boat Cruise</option>
+                  <option value="vendor">Vendor Table ($500)</option>
                   <option value="donation">Donation</option>
                 </select>
 
                 {/* Installment — only for convention and boat_cruise */}
-                {pt && pt !== 'donation' && (
+                {pt && pt !== 'donation' && pt !== 'vendor' && (
                   <select value={inst} onChange={e => updateField('installment', e.target.value)}
                     className={`w-full ${input}`}>
                     <option value="">Full payment</option>
@@ -1233,6 +1344,11 @@ export default function AdminRegistrants() {
                     <input type="checkbox" checked={editForm.boat_cruise}
                       onChange={e => setEditForm({ ...editForm, boat_cruise: e.target.checked })} className="w-4 h-4 rounded" />
                     Boat Cruise
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" checked={editForm.vendor || false}
+                      onChange={e => setEditForm({ ...editForm, vendor: e.target.checked })} className="w-4 h-4 rounded" />
+                    Vendor Table
                   </label>
                   <label className="flex items-center gap-2 text-sm text-amber-600 cursor-pointer font-medium">
                     <input type="checkbox" checked={editForm.is_vip || false}
