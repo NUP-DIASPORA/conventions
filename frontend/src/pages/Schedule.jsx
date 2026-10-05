@@ -3,39 +3,58 @@ import { useQuery } from '@tanstack/react-query'
 import { getSessions } from '../services/api'
 
 const CONFERENCE_DAYS = [
-  { label: 'Thu Aug 13', date: '2026-08-13', subtitle: 'Arrival & Leadership' },
-  { label: 'Fri Aug 14', date: '2026-08-14', subtitle: 'Engaging the World' },
-  { label: 'Sat Aug 15', date: '2026-08-15', subtitle: 'Building Bridges' },
+  { label: 'Thu Aug 13', date: '2026-08-13', subtitle: 'Arrival & Training' },
+  { label: 'Fri Aug 14', date: '2026-08-14', subtitle: 'Opening Day' },
+  { label: 'Sat Aug 15', date: '2026-08-15', subtitle: 'Main Convention' },
   { label: 'Sun Aug 16', date: '2026-08-16', subtitle: 'Closing Day' },
+  { label: 'Mon Aug 17', date: '2026-08-17', subtitle: 'Departures' },
 ]
 
-// Hardcoded program from the official schedule (supplements any DB sessions)
+// Official program from the Organizing Committee Events Manager Draft
 const OFFICIAL_PROGRAM = {
   '2026-08-13': [
-    { start: '8:00 AM', end: '2:00 PM',  title: 'Arrival of Delegates',           description: 'Offsite meetings for Ugandan delegates', type: 'logistics' },
-    { start: '12:00 PM', end: '1:00 PM', title: 'Convention Leadership Meetings', description: 'NUP Leadership and Convention organizing committee meeting', type: 'meeting' },
-    { start: '2:00 PM', end: '6:00 PM',  title: 'Empowering Leadership Training', description: 'Leadership training session', type: 'workshop' },
-    { start: '7:00 PM', end: '11:00 PM', title: "Patriot's Day Cup",              description: 'Soccer game: Chicago Cranes vs. NUP Diaspora, followed by Picnic/BBQ', type: 'social' },
+    { start: '7:00 AM',  end: '11:59 PM', title: 'Convention Operations Open',       description: 'Convention Office: Century AB (2nd Floor) · Registration Desk & Vendor Tables: International Foyer (Lobby Level)', type: 'logistics' },
+    { start: '10:00 AM', end: '12:00 PM', title: 'Leadership Meeting',               description: 'Room: Pacific A (Lobby Level)', type: 'meeting' },
+    { start: '1:00 PM',  end: '2:00 PM',  title: 'Activism Skills Academy',          description: 'Organizing for Impact — Practical training to strengthen advocacy, community organizing, and civic leadership · Room: Pacific B', type: 'workshop' },
+    { start: '2:00 PM',  end: '3:00 PM',  title: 'Digital Organizing & Security Workshop', description: 'Equipping activists and community leaders with tools for effective and secure engagement · Room: Pacific B', type: 'workshop' },
+    { start: '3:00 PM',  end: '5:00 PM',  title: 'Community Safety, First Aid & Resilience Training', description: 'Room: Pacific B (Lobby Level)', type: 'workshop' },
+    { start: '6:00 PM',  end: '9:00 PM',  title: 'Community Welcome Festival',       description: 'Youth Leadership Retreat, Sports Festival & Community Picnic · Soccer Field: 17015 Balboa Blvd., Encino, CA 91316 · Vans transport delegates from the hotel', type: 'social' },
+    { start: '10:00 PM', end: '2:00 AM',  title: 'Evening Cocktail & Networking',    description: 'Room: International A (Lobby Level) · Dance floor · DJ', type: 'social' },
   ],
   '2026-08-14': [
-    { start: '8:00 AM', end: '11:00 PM', title: 'Delegate Registration',          description: 'Registration Desk, 2nd floor', type: 'logistics' },
-    { start: '8:00 AM', end: '12:00 PM', title: 'March for Democracy',            description: 'Rally for Democracy Demonstration/Protest', type: 'advocacy' },
-    { start: '10:00 AM', end: '12:00 PM',title: 'United Forces for Change',       description: 'Leaders Meeting', type: 'meeting' },
-    { start: '12:30 PM', end: '1:30 PM', title: 'Muslim Prayer Session',          description: '', type: 'prayer' },
-    { start: '1:30 PM', end: '6:00 PM',  title: 'Opening Ceremony',              description: 'Envisioning A New Uganda — Presentation of Papers', type: 'plenary' },
-    { start: '7:00 PM', end: '10:30 PM', title: "Celebrating Women's Excellence", description: "Celebrating Women's Excellence and Achievements", type: 'ceremony' },
-    { start: '10:30 PM', end: '1:00 AM', title: 'Meet and Greet Cocktail',        description: 'Fostering Connections', type: 'social' },
+    { start: '7:00 AM',  end: '11:59 PM', title: 'Convention Operations Open',       description: 'Convention Office: Century AB (2nd Floor) · Registration Desk & Vendor Tables: International Foyer (Lobby Level)', type: 'logistics' },
+    { start: '6:30 AM',  end: '8:00 AM',  title: 'Breakfast Roundtable with Community Elders', description: 'Intergenerational dialogue focused on mentorship, historical reflection, and leadership wisdom · Designated Overflow Room', type: 'meeting' },
+    { start: '8:30 AM',  end: '9:30 AM',  title: 'Ekimeeza: People\'s Open Forum',   description: '"The Future of Uganda\'s Democratic Journey" — A moderated open-mic dialogue for delegates to share perspectives, ideas, and proposals · Room: International B', type: 'plenary' },
+    { start: '9:30 AM',  end: '12:30 PM', title: 'Leadership Development Workshop',  description: '"Building Effective Diaspora Leaders for Democratic Change" · Room: International B', type: 'workshop' },
+    { start: '12:30 PM', end: '1:30 PM',  title: 'Jum\'ah Prayers',                  description: 'Room: Century CD (2nd Floor)', type: 'prayer' },
+    { start: '1:30 PM',  end: '6:00 PM',  title: 'Official Opening Ceremony',        description: 'Policy Forum & Chapter Paper Presentations — Envisioning A New Uganda · Room: International B', type: 'plenary' },
+    { start: '6:00 PM',  end: '7:00 PM',  title: 'Dinner Break',                     description: '', type: 'logistics' },
+    { start: '7:00 PM',  end: '10:30 PM', title: 'Women\'s Leadership & Resilience Forum', description: '"The Power of Resilience: Women at the Forefront of Uganda\'s Democratic Journey" · Room: International B', type: 'ceremony' },
+    { start: '10:00 PM', end: '2:00 AM',  title: 'Convention Networking Reception',   description: 'Room: International A · Dance floor · DJ · Cash Bar', type: 'social' },
   ],
   '2026-08-15': [
-    { start: '8:00 AM', end: '5:00 PM',  title: 'Delegate Registration',          description: '', type: 'logistics' },
-    { start: '8:30 AM', end: '9:30 AM',  title: 'General Session',               description: 'Welcome remarks and introduction of the theme', type: 'plenary' },
-    { start: '9:30 AM', end: '12:00 PM', title: 'Distinguished Speakers',         description: 'Presentation by Panelists', type: 'talk' },
-    { start: '10:00 AM', end: '12:00 PM',title: 'Youth Session',                  description: 'Empowering the Youth', type: 'workshop' },
-    { start: '1:00 PM', end: '3:30 PM',  title: 'Ugandan Delegates',             description: 'Our Collective Vision — Presentation by Ugandan Delegates', type: 'talk' },
-    { start: '4:00 PM', end: '4:30 PM',  title: 'Departure for Boat Cruise',     description: 'Buses depart from the Hotel', type: 'logistics' },
-    { start: '7:00 PM', end: '11:00 PM', title: 'Boat Cruise — Heroes Celebration on Waters', description: 'Dinner and Entertainment aboard a luxury City Cruises vessel from Marina del Rey', type: 'social' },
+    { start: '7:00 AM',  end: '11:59 PM', title: 'Convention Operations Open',       description: 'Convention Office: Century AB (2nd Floor) · Registration Desk & Vendor Tables: International Foyer (Lobby Level)', type: 'logistics' },
+    { start: '6:30 AM',  end: '8:00 AM',  title: 'Complimentary Breakfast',          description: 'Designated Overflow Room', type: 'logistics' },
+    { start: '8:30 AM',  end: '11:30 AM', title: 'Special Policy Forum',             description: '"Uganda\'s 2026 Elections: Analysis, Accountability and the Road Ahead" · Featured Speaker: Agather Atuhaire · Room: International B (250 delegates)', type: 'talk' },
+    { start: '9:00 AM',  end: '12:00 PM', title: 'Youth Leadership & Skills Track',  description: 'Room: Pacific A', type: 'workshop' },
+    { start: '11:30 AM', end: '1:00 PM',  title: 'Leadership Strategy Forum',        description: '"The Road Ahead for Democratic Change in Uganda" · High-level dialogue on Uganda\'s political landscape and pathways for democratic change · Room: International B', type: 'talk' },
+    { start: '1:00 PM',  end: '2:30 PM',  title: 'Presidential Keynote Address',     description: '"Hope, Courage and the Future of Uganda" · Room: International B', type: 'plenary' },
+    { start: '3:00 PM',  end: '4:00 PM',  title: 'Town Hall Forum & Delegate Q&A',   description: 'Direct engagement between delegates, leadership, experts, and invited guests · Room: International B', type: 'plenary' },
+    { start: '4:00 PM',  end: '4:30 PM',  title: 'Convention Resolutions Session',   description: 'Adoption of Resolutions · Summary of Recommendations · Closing Remarks', type: 'meeting' },
+    { start: '6:30 PM',  end: '11:00 PM', title: 'Heroes Fundraising Gala & Freedom Dinner Cruise', description: 'Departure: Fisherman\'s Village Marina · 13755 Fiji Way, Marina Del Rey, CA 90292', type: 'social' },
+    { start: '11:00 PM', end: '2:00 AM',  title: 'Networking After Party',           description: 'Room: International A · Dance floor · DJ', type: 'social' },
   ],
-  '2026-08-16': [],
+  '2026-08-16': [
+    { start: '7:00 AM',  end: '11:59 PM', title: 'Convention Operations Open',       description: 'Convention Office: Century AB (2nd Floor) · Registration Desk & Vendor Tables: International Foyer (Lobby Level)', type: 'logistics' },
+    { start: '6:30 AM',  end: '8:00 AM',  title: 'Breakfast',                        description: 'Designated Overflow Room', type: 'logistics' },
+    { start: '8:00 AM',  end: '10:00 AM', title: 'Interfaith Prayer & Reflection Service', description: '"Faith, Healing and National Restoration" · Room: Century CD (2nd Floor)', type: 'prayer' },
+    { start: '10:00 AM', end: '12:00 PM', title: 'Diaspora Leadership Strategic Planning Meeting', description: 'Room: Pacific A · Boardroom setup (50 delegates)', type: 'meeting' },
+    { start: '12:00 PM', end: '4:00 PM',  title: 'NUP Diaspora Annual General Meeting (AGM)', description: 'Room: International B (150 delegates)', type: 'plenary' },
+    { start: '5:00 PM',  end: '11:00 PM', title: 'Grand Closing Ceremony & Unity Gala', description: 'International Ballroom (Lobby Level) · Buffet Dinner at 8:00 PM · Cash Bars 8:00 PM – 1:00 AM (350 delegates)', type: 'ceremony' },
+  ],
+  '2026-08-17': [
+    { start: 'Morning',  end: 'All Day',  title: 'Departures & Hospitality Services', description: 'Guest departures · Hospitality support · Convention breakdown · Vendor load-out · Final hotel coordination and closeout', type: 'logistics' },
+  ],
 }
 
 const TYPE_STYLES = {
@@ -59,13 +78,13 @@ export default function Schedule() {
   })
 
   const officialSessions = OFFICIAL_PROGRAM[selectedDate] || []
-  const selectedDay = CONFERENCE_DAYS.find(d => d.date === selectedDate)
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-12">
       <p className="text-xs font-semibold text-blue-700 uppercase tracking-widest mb-1">NUP Diaspora Convention 2026</p>
       <h1 className="text-3xl font-bold text-gray-800 mb-1">Convention Program</h1>
-      <p className="text-gray-500 text-sm mb-6">Hilton Los Angeles Airport Hotel · August 12–16, 2026</p>
+      <p className="text-gray-500 text-sm mb-1">Hilton Los Angeles Airport Hotel · August 13–17, 2026</p>
+      <p className="text-xs text-gray-400 italic mb-6">Theme: "Onward to Uganda's Liberation: Through Unity, Strength, and Collective Purpose"</p>
 
       {/* Day tabs */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-8">
@@ -85,7 +104,6 @@ export default function Schedule() {
         ))}
       </div>
 
-      {/* Official program sessions */}
       {officialSessions.length === 0 && dbSessions.length === 0 && (
         <p className="text-gray-400 text-center py-12">Program details coming soon.</p>
       )}

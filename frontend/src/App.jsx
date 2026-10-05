@@ -3,8 +3,11 @@ import { useAuth } from './services/auth'
 
 // Public pages
 import Home from './pages/Home'
+import Convention from './pages/Convention'
 import Speakers from './pages/Speakers'
 import Schedule from './pages/Schedule'
+import Executives from './pages/Executives'
+import Fundraiser from './pages/Fundraiser'
 import MyQR from './pages/MyQR'
 
 // Admin pages
@@ -27,8 +30,11 @@ export default function App() {
       <Routes>
         {/* Public routes with navbar */}
         <Route path="/" element={<><Navbar /><Home /></>} />
+        <Route path="/convention" element={<><Navbar /><Convention /></>} />
         <Route path="/speakers" element={<><Navbar /><Speakers /></>} />
         <Route path="/schedule" element={<><Navbar /><Schedule /></>} />
+        <Route path="/executives" element={<><Navbar /><Executives /></>} />
+        <Route path="/fundraiser" element={<><Navbar /><Fundraiser /></>} />
         <Route path="/my-qr" element={<MyQR />} />
 
         {/* Admin routes */}

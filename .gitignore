@@ -32,3 +32,4 @@ dist/
 backend/local_dev.db
 *.db
 backend/local_dev.db
+backend/create_admins_bulk.py
