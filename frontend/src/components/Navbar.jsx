@@ -25,10 +25,7 @@ export default function Navbar() {
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-4 lg:gap-6 text-sm flex-wrap justify-end">
           <NavLink to="/" end className={linkClass}>Home</NavLink>
-          <NavLink to="/convention" className={linkClass}>Convention</NavLink>
           <NavLink to="/executives" className={linkClass}>Executives</NavLink>
-          <NavLink to="/speakers" className={linkClass}>Speakers</NavLink>
-          <NavLink to="/schedule" className={linkClass}>Schedule</NavLink>
           <NavLink to="/fundraiser" className={linkClass}>$50k Drive</NavLink>
           <NavLink to="/admin" className="text-gray-400 hover:text-gray-600 text-xs transition">Admin</NavLink>
         </div>
@@ -43,12 +40,9 @@ export default function Navbar() {
       {open && (
         <div className="md:hidden bg-white border-t border-gray-100 px-4 pb-4 flex flex-col gap-3 text-sm">
           <NavLink to="/" end className={linkClass} onClick={() => setOpen(false)}>Home</NavLink>
-          <NavLink to="/convention" className={linkClass} onClick={() => setOpen(false)}>Convention</NavLink>
           <NavLink to="/executives" className={linkClass} onClick={() => setOpen(false)}>Executives</NavLink>
-          <NavLink to="/speakers" className={linkClass} onClick={() => setOpen(false)}>Speakers</NavLink>
-          <NavLink to="/schedule" className={linkClass} onClick={() => setOpen(false)}>Schedule</NavLink>
           <NavLink to="/fundraiser" className={linkClass} onClick={() => setOpen(false)}>$50k Drive</NavLink>
-          <NavLink to="/admin" className="text-gray-400 text-xs" onClick={() => setOpen(false)}>Admin Portal</NavLink>
+          <NavLink to="/admin" className="text-gray-400 text-xs" onClick={() => setOpen(false)}>Admin</NavLink>
         </div>
       )}
     </nav>
