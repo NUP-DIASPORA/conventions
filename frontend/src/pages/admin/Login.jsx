@@ -31,7 +31,7 @@ export default function AdminLogin() {
           ← Back to Home
         </Link>
         <h1 className="text-2xl font-bold text-gray-800 mb-1">Admin Login</h1>
-        <p className="text-gray-500 text-sm mb-6">NUP Convention Los Angeles 2026 — Staff Portal</p>
+        <p className="text-gray-500 text-sm mb-6">NUP Diaspora — Staff Portal</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

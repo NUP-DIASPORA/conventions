@@ -163,14 +163,17 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header style={{ background: 'linear-gradient(to right, #111e45, #1a3572)' }} className="text-white px-6 py-4 flex justify-between items-center shadow-lg">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="hover:text-white text-sm" style={{ color: '#a8b8d8' }}>← Home</Link>
+      <header style={{ background: 'linear-gradient(to right, #111e45, #1a3572)' }} className="text-white px-6 py-4 flex flex-wrap justify-between items-center gap-3 shadow-lg">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-5">
+          <Link to="/admin" className="hover:text-white text-lg font-bold" style={{ color: '#a8b8d8' }}>← Admin</Link>
           <h1 className="text-lg font-bold tracking-wide">NUP Convention — Admin</h1>
+          <Link to="/admin/pledges" className="text-lg font-bold px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20" style={{ color: '#fff' }}>
+            $50k Pledges
+          </Link>
         </div>
-        <div className="flex items-center gap-4">
-          <button onClick={() => setShowPwForm(true)} className="text-sm hover:text-white" style={{ color: '#a8b8d8' }}>Change Password</button>
-          <button onClick={logout} className="text-sm hover:text-white" style={{ color: '#a8b8d8' }}>Sign out</button>
+        <div className="flex items-center gap-5">
+          <button onClick={() => setShowPwForm(true)} className="text-lg font-bold hover:text-white" style={{ color: '#a8b8d8' }}>Change Password</button>
+          <button onClick={logout} className="text-lg font-bold hover:text-white" style={{ color: '#a8b8d8' }}>Sign out</button>
         </div>
       </header>
 
@@ -313,6 +316,12 @@ export default function AdminDashboard() {
         <section>
           <SectionHeading>Quick Actions</SectionHeading>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Link to="/admin/pledges"
+              className="group bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all" style={{ borderTop: '3px solid #cc2229' }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4 transition-colors" style={{ background: '#fef1f1' }}>💰</div>
+              <h3 className="font-semibold text-gray-800 text-base">$50k Pledges</h3>
+              <p className="text-sm text-gray-500 mt-1">Track pledges and installment payments</p>
+            </Link>
             <Link to="/admin/registrants"
               className="group bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all" style={{ borderTop: '3px solid #1a3572' }}>
               <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4 transition-colors" style={{ background: '#eef1f9' }}>👥</div>

@@ -153,9 +153,9 @@ export function DeletedRegistrantsView() {
       <header style={{ background: 'linear-gradient(to right, #111e45, #1a3572)' }} className="text-white px-6 py-5">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Link to="/" className="text-blue-300 hover:text-white text-sm">← Home</Link>
+            <Link to="/" className="text-blue-300 hover:text-white text-lg font-bold">← Home</Link>
             <span className="text-blue-600">|</span>
-            <Link to="/admin" className="text-blue-300 hover:text-white text-sm">Dashboard</Link>
+            <Link to="/admin/convention" className="text-blue-300 hover:text-white text-lg font-bold">Dashboard</Link>
             <span className="text-blue-600">|</span>
             <h1 className="text-lg font-bold tracking-wide">Deleted Registrants</h1>
           </div>
@@ -632,9 +632,9 @@ export default function AdminRegistrants() {
       <header style={{ background: 'linear-gradient(to right, #111e45, #1a3572)' }} className="text-white px-6 py-5">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Link to="/" className="text-blue-300 hover:text-white text-sm">← Home</Link>
+            <Link to="/" className="text-blue-300 hover:text-white text-lg font-bold">← Home</Link>
             <span className="text-blue-600">|</span>
-            <Link to="/admin" className="text-blue-300 hover:text-white text-sm">Dashboard</Link>
+            <Link to="/admin/convention" className="text-blue-300 hover:text-white text-lg font-bold">Dashboard</Link>
             <span className="text-blue-600">|</span>
             <h1 className="text-lg font-bold tracking-wide">Registrants</h1>
           </div>

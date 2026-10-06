@@ -132,9 +132,9 @@ export default function AdminCheckIn() {
     <div className="min-h-screen bg-gray-50">
       <header style={{ background: 'linear-gradient(to right, #111e45, #1a3572)' }} className="text-white px-6 py-5">
         <div className="max-w-2xl mx-auto flex items-center gap-4">
-          <Link to="/" className="text-blue-300 hover:text-white text-sm">← Home</Link>
+          <Link to="/" className="text-blue-300 hover:text-white text-lg font-bold">← Home</Link>
           <span className="text-blue-600">|</span>
-          <Link to="/admin" className="text-blue-300 hover:text-white text-sm">Dashboard</Link>
+          <Link to="/admin/convention" className="text-blue-300 hover:text-white text-lg font-bold">Dashboard</Link>
           <span className="text-blue-600">|</span>
           <h1 className="text-lg font-bold">Check-In</h1>
         </div>

@@ -72,4 +72,21 @@ export const createSession = (data) => api.post('/programs', data)
 export const updateSession = (id, data) => api.patch(`/programs/${id}`, data)
 export const deleteSession = (id) => api.delete(`/programs/${id}`)
 
+// --- Pledges ($50k Drive) ---
+export const getPledgeSummary = () => api.get('/pledges/summary')
+export const getPledges = (params) => api.get('/pledges', { params })
+export const getPledge = (id) => api.get(`/pledges/${id}`)
+export const createPledge = (data) => api.post('/pledges', data)
+export const updatePledge = (id, data) => api.patch(`/pledges/${id}`, data)
+export const cancelPledge = (id) => api.delete(`/pledges/${id}`)
+export const addPledgePayment = (id, data) => api.post(`/pledges/${id}/payments`, data)
+export const deletePledgePayment = (paymentId) => api.delete(`/pledges/payments/${paymentId}`)
+export const bulkUploadPledges = (file) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post('/pledges/bulk-upload', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
 export default api
