@@ -243,3 +243,153 @@ class ProgramSessionOut(BaseModel):
     is_public: bool
     class Config:
         from_attributes = True
+
+
+# --- Pledges ($50k Drive) ---
+PLEDGE_PAYMENT_METHODS = ("zelle", "cashapp", "cash", "venmo", "stripe")
+PLEDGE_STATUSES = ("open", "fulfilled", "cancelled")
+
+
+class PledgePaymentCreate(BaseModel):
+    amount: str
+    paid_at: date
+    method: str
+    reference: Optional[str] = None
+
+    @field_validator("method")
+    @classmethod
+    def validate_method(cls, v: str) -> str:
+        m = (v or "").strip().lower()
+        if m not in PLEDGE_PAYMENT_METHODS:
+            raise ValueError(f"method must be one of: {', '.join(PLEDGE_PAYMENT_METHODS)}")
+        return m
+
+    @field_validator("amount")
+    @classmethod
+    def validate_amount(cls, v: str) -> str:
+        cleaned = (v or "").replace("$", "").replace(",", "").strip()
+        try:
+            n = float(cleaned)
+        except ValueError as e:
+            raise ValueError("amount must be a number") from e
+        if n <= 0:
+            raise ValueError("amount must be greater than 0")
+        return f"{n:.2f}"
+
+
+class PledgePaymentOut(BaseModel):
+    id: int
+    pledge_id: int
+    amount: str
+    paid_at: date
+    method: str
+    reference: Optional[str]
+    recorded_by: Optional[str]
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+
+class PledgeCreate(BaseModel):
+    name: str
+    email: EmailStr
+    phone: Optional[str] = None
+    chapter: Optional[str] = None
+    message: Optional[str] = None
+    amount_pledged: str
+    pledged_at: Optional[date] = None
+    notes: Optional[str] = None
+    source: str = "manual"
+
+    @field_validator("amount_pledged")
+    @classmethod
+    def validate_pledge_amount(cls, v: str) -> str:
+        cleaned = (v or "").replace("$", "").replace(",", "").strip()
+        try:
+            n = float(cleaned)
+        except ValueError as e:
+            raise ValueError("amount_pledged must be a number") from e
+        if n <= 0:
+            raise ValueError("amount_pledged must be greater than 0")
+        return f"{n:.2f}"
+
+    @field_validator("source")
+    @classmethod
+    def validate_source(cls, v: str) -> str:
+        s = (v or "manual").strip().lower()
+        if s not in ("manual", "google_form"):
+            raise ValueError("source must be manual or google_form")
+        return s
+
+
+class PledgeUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    chapter: Optional[str] = None
+    message: Optional[str] = None
+    amount_pledged: Optional[str] = None
+    pledged_at: Optional[date] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+    @field_validator("amount_pledged")
+    @classmethod
+    def validate_pledge_amount(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        cleaned = v.replace("$", "").replace(",", "").strip()
+        try:
+            n = float(cleaned)
+        except ValueError as e:
+            raise ValueError("amount_pledged must be a number") from e
+        if n <= 0:
+            raise ValueError("amount_pledged must be greater than 0")
+        return f"{n:.2f}"
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        s = v.strip().lower()
+        if s not in PLEDGE_STATUSES:
+            raise ValueError(f"status must be one of: {', '.join(PLEDGE_STATUSES)}")
+        return s
+
+
+class PledgeOut(BaseModel):
+    id: int
+    name: str
+    email: str
+    phone: Optional[str]
+    chapter: Optional[str]
+    message: Optional[str]
+    amount_pledged: str
+    pledged_at: date
+    status: str
+    source: str
+    notes: Optional[str]
+    created_by: Optional[str]
+    created_at: datetime
+    amount_paid: str
+    amount_remaining: str
+    payments: List[PledgePaymentOut] = []
+    class Config:
+        from_attributes = True
+
+
+class PledgeSummary(BaseModel):
+    total_pledged: str
+    total_paid: str
+    total_remaining: str
+    open_count: int
+    fulfilled_count: int
+    cancelled_count: int
+    pledge_count: int
+
+
+class PledgeBulkUploadResult(BaseModel):
+    created: int
+    skipped: int
+    errors: List[str]

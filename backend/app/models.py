@@ -132,3 +132,38 @@ class ProgramSession(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     speaker = relationship("Speaker", back_populates="sessions")
+
+
+class Pledge(Base):
+    __tablename__ = "pledges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, index=True, nullable=False)
+    phone = Column(String, nullable=True)
+    chapter = Column(String, nullable=True)
+    message = Column(Text, nullable=True)
+    amount_pledged = Column(String, nullable=False)  # e.g. "500.00"
+    pledged_at = Column(Date, nullable=False)
+    status = Column(String, nullable=False, default="open")  # open | fulfilled | cancelled
+    source = Column(String, nullable=False, default="manual")  # manual | google_form
+    notes = Column(Text, nullable=True)
+    created_by = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    payments = relationship("PledgePayment", back_populates="pledge", cascade="all, delete-orphan")
+
+
+class PledgePayment(Base):
+    __tablename__ = "pledge_payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pledge_id = Column(Integer, ForeignKey("pledges.id"), nullable=False, index=True)
+    amount = Column(String, nullable=False)
+    paid_at = Column(Date, nullable=False)
+    method = Column(String, nullable=False)  # zelle | cashapp | cash | venmo | stripe
+    reference = Column(String, nullable=True)
+    recorded_by = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    pledge = relationship("Pledge", back_populates="payments")

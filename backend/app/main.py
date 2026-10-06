@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from .database import engine, Base, ensure_schema
 from .config import settings
-from .routers import auth, registrants, checkins, speakers, programs, payments, stripe_webhook
+from .routers import auth, registrants, checkins, speakers, programs, payments, stripe_webhook, pledges
 
 # Create all tables / add missing columns (no-ops if already present)
 Base.metadata.create_all(bind=engine)
@@ -47,6 +47,7 @@ app.include_router(auth.router)
 app.include_router(registrants.router)
 app.include_router(checkins.router)
 app.include_router(payments.router)
+app.include_router(pledges.router)
 app.include_router(speakers.router)
 app.include_router(programs.router)
 app.include_router(stripe_webhook.router)
